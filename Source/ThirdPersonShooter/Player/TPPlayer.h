@@ -35,6 +35,7 @@ private:
 	void UpdateCapsuleSize(const float DeltaTime);
 
 	bool _isLeftShoulder;
+	bool _isInAds;
 	float _shoulderCameraLerpAmount;
 	FVector _shoulderStartPosition;
 	FVector _shoulderEndPosition;
@@ -53,6 +54,7 @@ private:
 	void HandleCrouchPressed();
 	void HandleShoulderSwapPressed();
 	void HandleDivePressed();
+	void HandleADSPressed();
 
 protected:
 	virtual void BeginPlay() override;
@@ -85,7 +87,13 @@ public:
 		FVector CameraLeftShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+		FVector CameraADSLeftShoulder;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 		FVector CameraRightShoulder;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+		FVector CameraADSRightShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 		float CameraLerpSpeed;

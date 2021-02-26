@@ -61,6 +61,7 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
 	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
 	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
+	PlayerInputComponent->BindAction("ADS", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleADSPressed);
 
 	PlayerInputComponent->BindAxis("Turn", this, &ATPPlayer::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &ATPPlayer::LookUpRate);
@@ -160,16 +161,30 @@ void ATPPlayer::HandleShoulderSwapPressed()
 {
 	_isLeftShoulder = !_isLeftShoulder;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
+	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
 	{
-		_shoulderEndPosition = CameraLeftShoulder;
+		if (_isInAds)
+		{
+			_shoulderEndPosition = CameraADSLeftShoulder;
+		}
+		else
+		{
+			_shoulderEndPosition = CameraLeftShoulder;
+		}
 	}
 	else
 	{
-		_shoulderEndPosition = CameraRightShoulder;
+		if (_isInAds)
+		{
+			_shoulderEndPosition = CameraADSRightShoulder;
+		}
+		else
+		{
+			_shoulderEndPosition = CameraRightShoulder;
+		}
 	}
-	_shoulderCameraLerpAmount = 0;
 }
 
 void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
@@ -215,6 +230,36 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 		else
 		{
 			AddMovementInput(_diveDirection, 1);
+		}
+	}
+}
+
+void ATPPlayer::HandleADSPressed()
+{
+	_isInAds = !_isInAds;
+	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
+	_shoulderCameraLerpAmount = 0;
+
+	if (_isLeftShoulder)
+	{
+		if (_isInAds)
+		{
+			_shoulderEndPosition = CameraADSLeftShoulder;
+		}
+		else
+		{
+			_shoulderEndPosition = CameraLeftShoulder;
+		}
+	}
+	else
+	{
+		if (_isInAds)
+		{
+			_shoulderEndPosition = CameraADSRightShoulder;
+		}
+		else
+		{
+			_shoulderEndPosition = CameraRightShoulder;
 		}
 	}
 }
