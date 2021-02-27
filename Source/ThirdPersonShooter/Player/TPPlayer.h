@@ -39,6 +39,8 @@ private:
 	float _shoulderCameraLerpAmount;
 	FVector _shoulderStartPosition;
 	FVector _shoulderEndPosition;
+	FVector _meshStartRotation;
+	FVector _meshEndRotation;
 	void UpdateShoulderCamera(const float DeltaTime);
 
 	float _diveTimer;
@@ -49,7 +51,7 @@ private:
 	void MoveRight(const float Value);
 	void TurnAtRate(const float Value);
 	void LookUpRate(const float Value);
-	void JumpCharacter();
+	void HandleJumpPressed();
 	void HandleSprintPressed();
 	void HandleCrouchPressed();
 	void HandleShoulderSwapPressed();
@@ -98,6 +100,12 @@ public:
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 		float CameraLerpSpeed;
 
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+		FVector MeshRightRotation;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+		FVector MeshLeftRotation;
+
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 		float DefaultHalfHeight;
 
@@ -118,6 +126,12 @@ public:
 	ATPPlayer();
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
+		void PlayerJumpNotify();
+
+	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
+		void PlayerDiveNotify();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
 		EPlayerMovementState GetTopPlayerState() const;

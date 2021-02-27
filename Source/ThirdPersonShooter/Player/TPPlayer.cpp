@@ -39,6 +39,8 @@ void ATPPlayer::BeginPlay()
 	_isLeftShoulder = false;
 	_shoulderStartPosition = CameraRightShoulder;
 	_shoulderEndPosition = CameraRightShoulder;
+	_meshStartRotation = MeshRightRotation;
+	_meshEndRotation = MeshRightRotation;
 	_shoulderCameraLerpAmount = 0;
 }
 
@@ -56,7 +58,7 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	check(PlayerInputComponent);
 
-	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::JumpCharacter);
+	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleJumpPressed);
 	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleSprintPressed);
 	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
 	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
@@ -124,7 +126,7 @@ void ATPPlayer::TurnAtRate(const float Value)
 	AddControllerYawInput(Value * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
-void ATPPlayer::JumpCharacter()
+void ATPPlayer::HandleJumpPressed()
 {
 	if (GetTopPlayerState() == EPlayerMovementState::Crouch)
 	{
@@ -133,6 +135,7 @@ void ATPPlayer::JumpCharacter()
 		return;
 	}
 
+	PlayerJumpNotify();
 	Jump();
 }
 
@@ -161,6 +164,7 @@ void ATPPlayer::HandleShoulderSwapPressed()
 {
 	_isLeftShoulder = !_isLeftShoulder;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
+	_meshStartRotation = GetMesh()->GetRelativeRotation().Euler();
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -173,6 +177,8 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		{
 			_shoulderEndPosition = CameraLeftShoulder;
 		}
+
+		_meshEndRotation = MeshLeftRotation;
 	}
 	else
 	{
@@ -184,6 +190,8 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		{
 			_shoulderEndPosition = CameraRightShoulder;
 		}
+
+		_meshEndRotation = MeshRightRotation;
 	}
 }
 
@@ -197,11 +205,15 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 	const FVector mappedLocation = FMath::Lerp(_shoulderStartPosition, _shoulderEndPosition, _shoulderCameraLerpAmount);
 	FollowCamera->SetRelativeLocation(mappedLocation);
 
+	const FVector mappedMeshRotation = FMath::Lerp(_meshStartRotation, _meshEndRotation, _shoulderCameraLerpAmount);
+	GetMesh()->SetRelativeRotation(FRotator::MakeFromEuler(mappedMeshRotation));
+
 	_shoulderCameraLerpAmount += CameraLerpSpeed * DeltaTime;
 
 	if (_shoulderCameraLerpAmount >= 1)
 	{
 		FollowCamera->SetRelativeLocation(_shoulderEndPosition);
+		GetMesh()->SetRelativeRotation(FRotator::MakeFromEuler(_meshEndRotation));
 	}
 }
 
@@ -215,6 +227,8 @@ void ATPPlayer::HandleDivePressed()
 	RemovePlayerMovementState(EPlayerMovementState::Run);
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
+
+	PlayerDiveNotify();
 }
 
 void ATPPlayer::UpdateDive(const float DeltaTime)
@@ -238,6 +252,7 @@ void ATPPlayer::HandleADSPressed()
 {
 	_isInAds = !_isInAds;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
+	_meshStartRotation = GetMesh()->GetRelativeRotation().Euler();
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -250,6 +265,8 @@ void ATPPlayer::HandleADSPressed()
 		{
 			_shoulderEndPosition = CameraLeftShoulder;
 		}
+
+		_meshEndRotation = MeshLeftRotation;
 	}
 	else
 	{
@@ -261,6 +278,8 @@ void ATPPlayer::HandleADSPressed()
 		{
 			_shoulderEndPosition = CameraRightShoulder;
 		}
+
+		_meshEndRotation = MeshRightRotation;
 	}
 }
 
