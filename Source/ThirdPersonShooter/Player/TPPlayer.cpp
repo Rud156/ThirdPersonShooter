@@ -219,7 +219,7 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 
 void ATPPlayer::HandleDivePressed()
 {
-	const FVector direction = FVector(-_horizontalInput, _verticalInput, 0);
+	const FVector direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
 	_diveDirection = direction;
 
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
