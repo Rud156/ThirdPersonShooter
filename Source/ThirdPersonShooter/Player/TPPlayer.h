@@ -42,8 +42,7 @@ private:
 	FVector _meshStartRotation;
 	FVector _meshEndRotation;
 	void UpdateShoulderCamera(const float DeltaTime);
-
-	float _diveTimer;
+	
 	FVector _diveDirection;
 	void UpdateDive(const float DeltaTime);
 
@@ -81,9 +80,6 @@ public:
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
 		float DiveSpeed;
-
-	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float DiveDuration;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 		FVector CameraLeftShoulder;
@@ -132,6 +128,9 @@ public:
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
 		void PlayerDiveNotify();
+
+	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
+		void HandleDiveAnimComplete();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
 		EPlayerMovementState GetTopPlayerState() const;

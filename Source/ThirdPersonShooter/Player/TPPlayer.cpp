@@ -221,7 +221,6 @@ void ATPPlayer::HandleDivePressed()
 {
 	const FVector direction = FVector(-_horizontalInput, _verticalInput, 0);
 	_diveDirection = direction;
-	_diveTimer = DiveDuration;
 
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
 	RemovePlayerMovementState(EPlayerMovementState::Run);
@@ -233,19 +232,16 @@ void ATPPlayer::HandleDivePressed()
 
 void ATPPlayer::UpdateDive(const float DeltaTime)
 {
-	if (_diveTimer > 0)
+	if (GetTopPlayerState() == EPlayerMovementState::Dive)
 	{
-		_diveTimer -= DeltaTime;
-		if (_diveTimer <= 0)
-		{
-			RemovePlayerMovementState(EPlayerMovementState::Dive);
-			ApplyChangesToCharacter();
-		}
-		else
-		{
-			AddMovementInput(_diveDirection, 1);
-		}
+		AddMovementInput(_diveDirection, 1);
 	}
+}
+
+void ATPPlayer::HandleDiveAnimComplete()
+{
+	RemovePlayerMovementState(EPlayerMovementState::Dive);
+	ApplyChangesToCharacter();
 }
 
 void ATPPlayer::HandleADSPressed()
