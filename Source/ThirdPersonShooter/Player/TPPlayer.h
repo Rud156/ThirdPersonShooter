@@ -89,6 +89,9 @@ public:
 		float DiveSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
+		float DiveGetUpSpeed;
+
+	UPROPERTY(Category = "Player|Movement", EditAnywhere)
 		float DiveLerpSpeed;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)

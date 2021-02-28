@@ -284,6 +284,8 @@ void ATPPlayer::HandleDiveResetAngle()
 	_diveStartRotation = GetMesh()->GetRelativeRotation();
 	_diveEndRotation = _diveMeshRotation;
 	_diveLerpAmount = 0;
+
+	GetCharacterMovement()->MaxWalkSpeed = DiveGetUpSpeed;
 }
 
 void ATPPlayer::HandleADSPressed()
