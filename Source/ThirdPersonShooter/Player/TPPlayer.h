@@ -35,20 +35,11 @@ private:
 	void SetCapsuleData(const float TargetHeight, const float TargetRadius, const float MeshTargetPosition);
 	void UpdateCapsuleSize(const float DeltaTime);
 
-	FRotator _runMeshRotation;
-	FRotator _runMeshStartRotation;
-	FRotator _runMeshEndRotation;
-	float _runLerpAmount;
-	void UpdateRunMeshRotation(const float DeltaTime);
-	void ResetPreRunData(bool ForceReset = false);
-
 	bool _isLeftShoulder;
 	bool _isInAds;
 	float _shoulderCameraLerpAmount;
 	FVector _shoulderStartPosition;
 	FVector _shoulderEndPosition;
-	FVector _meshStartRotation;
-	FVector _meshEndRotation;
 	void UpdateShoulderCamera(const float DeltaTime);
 
 	FVector _diveDirection;
@@ -64,6 +55,7 @@ private:
 	void LookUpRate(const float Value);
 	void HandleJumpPressed();
 	void HandleSprintPressed();
+	void HandleSprintReleased();
 	void HandleCrouchPressed();
 	void HandleShoulderSwapPressed();
 	void HandleDivePressed();
@@ -114,12 +106,6 @@ public:
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 		float CameraLerpSpeed;
 
-	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		FVector MeshRightRotation;
-
-	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		FVector MeshLeftRotation;
-
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 		float DefaultHalfHeight;
 
@@ -140,6 +126,9 @@ public:
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 		float CrouchMeshZPosition;
+
+	UPROPERTY(Category = "Player|Size", EditAnywhere)
+		float MeshDefaultZRotation;
 
 #pragma endregion
 
@@ -167,4 +156,13 @@ public:
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
 		float GetHorizontalInput() const;
+
+	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
+		bool IsRunning();
+
+	UFUNCTION(Category = "Player|Camera", BlueprintCallable, BlueprintPure)
+		bool IsInAds();
+
+	UFUNCTION(Category = "Player|Camera", BlueprintCallable, BlueprintPure)
+		bool IsLeftShoulder();
 };

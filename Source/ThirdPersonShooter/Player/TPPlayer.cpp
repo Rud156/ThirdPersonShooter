@@ -41,10 +41,7 @@ void ATPPlayer::BeginPlay()
 	_isLeftShoulder = false;
 	_shoulderStartPosition = CameraRightShoulder;
 	_shoulderEndPosition = CameraRightShoulder;
-	_meshStartRotation = MeshRightRotation;
-	_meshEndRotation = MeshRightRotation;
 	_shoulderCameraLerpAmount = 0;
-	_runLerpAmount = 1;
 }
 
 void ATPPlayer::Tick(float DeltaTime)
@@ -54,7 +51,6 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateCapsuleSize(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
-	UpdateRunMeshRotation(DeltaTime);
 }
 
 void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -64,6 +60,7 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleJumpPressed);
 	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleSprintPressed);
+	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Released, this, &ATPPlayer::HandleSprintReleased);
 	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
 	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
 	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
@@ -90,16 +87,6 @@ void ATPPlayer::MoveForward(const float Value)
 
 		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::X);
 		AddMovementInput(direction, Value);
-	}
-
-	if (GetTopPlayerState() == EPlayerMovementState::Run)
-	{
-		if (Value != 1)
-		{
-			ResetPreRunData();
-			RemovePlayerMovementState(EPlayerMovementState::Run);
-			ApplyChangesToCharacter();
-		}
 	}
 }
 
@@ -146,57 +133,25 @@ void ATPPlayer::HandleJumpPressed()
 
 void ATPPlayer::HandleSprintPressed()
 {
-	const FVector direction = (GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput);
-	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshRightRotation.Z, 0);
+	if (_isInAds)
+	{
+		HandleADSPressed();
+	}
 
-	_runMeshRotation = GetMesh()->GetRelativeRotation();
-	_runMeshStartRotation = _runMeshRotation;
-	_runMeshEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
-	_runLerpAmount = 0;
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
 	PushPlayerMovementState(EPlayerMovementState::Run);
 	ApplyChangesToCharacter();
 }
 
-void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
+void ATPPlayer::HandleSprintReleased()
 {
-	if (_runLerpAmount >= 1)
-	{
-		return;
-	}
-
-	_runLerpAmount += RunLerpSpeed * DeltaTime;
-	const FRotator mappedRotation = FMath::Lerp(_runMeshStartRotation, _runMeshEndRotation, _runLerpAmount);
-	GetMesh()->SetRelativeRotation(mappedRotation);
-
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
-		const FVector direction = (GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput);
-		const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshRightRotation.Z, 0);
-
-		_runMeshStartRotation = mappedRotation;
-		_runMeshEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
-		_runLerpAmount = 0;
-	}
-
-	if (_runLerpAmount >= 1)
-	{
-		GetMesh()->SetRelativeRotation(_runMeshEndRotation);
-	}
-}
-
-void ATPPlayer::ResetPreRunData(bool ForceReset)
-{
-	if (!ForceReset)
-	{
-		_runMeshStartRotation = GetMesh()->GetRelativeRotation();
-		_runMeshEndRotation = _runMeshRotation;
-		_runLerpAmount = 0;
-	}
-	else
-	{
-		GetMesh()->SetRelativeRotation(_runMeshRotation);
+		RemovePlayerMovementState(EPlayerMovementState::Run);
+		ApplyChangesToCharacter();
 	}
 }
 
@@ -204,7 +159,6 @@ void ATPPlayer::HandleCrouchPressed()
 {
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
-		ResetPreRunData();
 		RemovePlayerMovementState(EPlayerMovementState::Run);
 	}
 
@@ -224,7 +178,6 @@ void ATPPlayer::HandleShoulderSwapPressed()
 {
 	_isLeftShoulder = !_isLeftShoulder;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
-	_meshStartRotation = GetMesh()->GetRelativeRotation().Euler();
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -237,8 +190,6 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		{
 			_shoulderEndPosition = CameraLeftShoulder;
 		}
-
-		_meshEndRotation = MeshLeftRotation;
 	}
 	else
 	{
@@ -250,8 +201,6 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		{
 			_shoulderEndPosition = CameraRightShoulder;
 		}
-
-		_meshEndRotation = MeshRightRotation;
 	}
 }
 
@@ -265,33 +214,28 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 	const FVector mappedLocation = FMath::Lerp(_shoulderStartPosition, _shoulderEndPosition, _shoulderCameraLerpAmount);
 	FollowCamera->SetRelativeLocation(mappedLocation);
 
-	const FVector mappedMeshRotation = FMath::Lerp(_meshStartRotation, _meshEndRotation, _shoulderCameraLerpAmount);
-	GetMesh()->SetRelativeRotation(FRotator::MakeFromEuler(mappedMeshRotation));
-
 	_shoulderCameraLerpAmount += CameraLerpSpeed * DeltaTime;
 
 	if (_shoulderCameraLerpAmount >= 1)
 	{
 		FollowCamera->SetRelativeLocation(_shoulderEndPosition);
-		GetMesh()->SetRelativeRotation(FRotator::MakeFromEuler(_meshEndRotation));
 	}
 }
 
 void ATPPlayer::HandleDivePressed()
 {
+	if (GetTopPlayerState() == EPlayerMovementState::Dive)
+	{
+		return;
+	}
+
 	if (_verticalInput == 0 && _horizontalInput == 0)
 	{
 		return;
 	}
 
-	if (GetTopPlayerState() == EPlayerMovementState::Run)
-	{
-		ResetPreRunData(true);
-		RemovePlayerMovementState(EPlayerMovementState::Run);
-	}
-
 	const FVector direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
-	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshRightRotation.Z, 0);
+	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshDefaultZRotation, 0);
 
 	_diveDirection = direction;
 	_diveMeshRotation = GetMesh()->GetRelativeRotation();
@@ -299,6 +243,7 @@ void ATPPlayer::HandleDivePressed()
 	_diveEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
 	_diveLerpAmount = 0;
 
+	RemovePlayerMovementState(EPlayerMovementState::Run);
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
@@ -343,9 +288,14 @@ void ATPPlayer::HandleDiveResetAngle()
 
 void ATPPlayer::HandleADSPressed()
 {
+	if (GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		RemovePlayerMovementState(EPlayerMovementState::Run);
+		ApplyChangesToCharacter();
+	}
+
 	_isInAds = !_isInAds;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
-	_meshStartRotation = GetMesh()->GetRelativeRotation().Euler();
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -358,8 +308,6 @@ void ATPPlayer::HandleADSPressed()
 		{
 			_shoulderEndPosition = CameraLeftShoulder;
 		}
-
-		_meshEndRotation = MeshLeftRotation;
 	}
 	else
 	{
@@ -371,8 +319,6 @@ void ATPPlayer::HandleADSPressed()
 		{
 			_shoulderEndPosition = CameraRightShoulder;
 		}
-
-		_meshEndRotation = MeshRightRotation;
 	}
 }
 
@@ -417,6 +363,12 @@ void ATPPlayer::PushPlayerMovementState(EPlayerMovementState MovementState)
 
 void ATPPlayer::RemovePlayerMovementState(const EPlayerMovementState MovementState)
 {
+	if (MovementState == EPlayerMovementState::Run)
+	{
+		bUseControllerRotationYaw = true;
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+	}
+
 	for (int i = _movementStack.Num() - 1; i >= 0; i--)
 	{
 		if (_movementStack[i] == MovementState)
@@ -473,7 +425,6 @@ void ATPPlayer::ApplyChangesToCharacter()
 
 	case EPlayerMovementState::Dive:
 		GetCharacterMovement()->MaxWalkSpeed = DiveSpeed;
-		SetCapsuleData(CrouchHalfHeight, CrouchRadius, CrouchMeshZPosition);
 		break;
 
 	default:
@@ -489,4 +440,29 @@ float ATPPlayer::GetVerticalInput() const
 float ATPPlayer::GetHorizontalInput() const
 {
 	return _horizontalInput;
+}
+
+bool ATPPlayer::IsRunning()
+{
+	if (_horizontalInput == 0 && _verticalInput == 0)
+	{
+		return false;
+	}
+	else if (GetTopPlayerState() != EPlayerMovementState::Run)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+bool ATPPlayer::IsInAds()
+{
+	return _isInAds;
+}
+
+bool ATPPlayer::IsLeftShoulder()
+{
+	return _isLeftShoulder;
 }
