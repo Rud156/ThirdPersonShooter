@@ -151,6 +151,9 @@ public:
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
 		void PlayerDiveNotify();
 
+	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
+		void ShoulderSwapNotify();
+
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 		void HandleDiveAnimComplete();
 

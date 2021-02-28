@@ -262,6 +262,8 @@ void ATPPlayer::HandleShoulderSwapPressed()
 			_shoulderEndPosition = CameraRightShoulder;
 		}
 	}
+
+	ShoulderSwapNotify();
 }
 
 void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
