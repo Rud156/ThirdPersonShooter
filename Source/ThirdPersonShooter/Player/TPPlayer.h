@@ -30,9 +30,17 @@ private:
 
 	FVector2D _capsuleRadius; // X: Target, Y: Current
 	FVector2D _capsuleHeight; // X: Target, Y: Current
+	FVector2D _meshLocation;
 	float _capsuleLerpAmount;
-	void SetCapsuleData(const float TargetHeight, const float TargetRadius);
+	void SetCapsuleData(const float TargetHeight, const float TargetRadius, const float MeshTargetPosition);
 	void UpdateCapsuleSize(const float DeltaTime);
+
+	FRotator _runMeshRotation;
+	FRotator _runMeshStartRotation;
+	FRotator _runMeshEndRotation;
+	float _runLerpAmount;
+	void UpdateRunMeshRotation(const float DeltaTime);
+	void ResetPreRunData(bool ForceReset = false);
 
 	bool _isLeftShoulder;
 	bool _isInAds;
@@ -42,8 +50,12 @@ private:
 	FVector _meshStartRotation;
 	FVector _meshEndRotation;
 	void UpdateShoulderCamera(const float DeltaTime);
-	
+
 	FVector _diveDirection;
+	FRotator _diveStartRotation;
+	FRotator _diveEndRotation;
+	FRotator _diveMeshRotation;
+	float _diveLerpAmount;
 	void UpdateDive(const float DeltaTime);
 
 	void MoveForward(const float Value);
@@ -76,10 +88,16 @@ public:
 		float WalkSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float SprintSpeed;
+		float RunSpeed;
+
+	UPROPERTY(Category = "Player|Movement", EditAnywhere)
+		float RunLerpSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
 		float DiveSpeed;
+
+	UPROPERTY(Category = "Player|Movement", EditAnywhere)
+		float DiveLerpSpeed;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 		FVector CameraLeftShoulder;
@@ -117,6 +135,12 @@ public:
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 		float CapsuleSizeLerpRate;
 
+	UPROPERTY(Category = "Player|Size", EditAnywhere)
+		float DefaultMeshZPosition;
+
+	UPROPERTY(Category = "Player|Size", EditAnywhere)
+		float CrouchMeshZPosition;
+
 #pragma endregion
 
 	ATPPlayer();
@@ -131,6 +155,9 @@ public:
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 		void HandleDiveAnimComplete();
+
+	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
+		void HandleDiveResetAngle();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
 		EPlayerMovementState GetTopPlayerState() const;

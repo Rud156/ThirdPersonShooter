@@ -9,6 +9,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
+#include "Kismet/KismetMathLibrary.h"
+
 ATPPlayer::ATPPlayer()
 {
 	bUseControllerRotationPitch = false;
@@ -42,6 +44,7 @@ void ATPPlayer::BeginPlay()
 	_meshStartRotation = MeshRightRotation;
 	_meshEndRotation = MeshRightRotation;
 	_shoulderCameraLerpAmount = 0;
+	_runLerpAmount = 1;
 }
 
 void ATPPlayer::Tick(float DeltaTime)
@@ -51,6 +54,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateCapsuleSize(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
+	UpdateRunMeshRotation(DeltaTime);
 }
 
 void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -92,6 +96,7 @@ void ATPPlayer::MoveForward(const float Value)
 	{
 		if (Value != 1)
 		{
+			ResetPreRunData();
 			RemovePlayerMovementState(EPlayerMovementState::Run);
 			ApplyChangesToCharacter();
 		}
@@ -141,13 +146,68 @@ void ATPPlayer::HandleJumpPressed()
 
 void ATPPlayer::HandleSprintPressed()
 {
+	const FVector direction = (GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput);
+	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshRightRotation.Z, 0);
+
+	_runMeshRotation = GetMesh()->GetRelativeRotation();
+	_runMeshStartRotation = _runMeshRotation;
+	_runMeshEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
+	_runLerpAmount = 0;
+
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
 	PushPlayerMovementState(EPlayerMovementState::Run);
 	ApplyChangesToCharacter();
 }
 
+void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
+{
+	if (_runLerpAmount >= 1)
+	{
+		return;
+	}
+
+	_runLerpAmount += RunLerpSpeed * DeltaTime;
+	const FRotator mappedRotation = FMath::Lerp(_runMeshStartRotation, _runMeshEndRotation, _runLerpAmount);
+	GetMesh()->SetRelativeRotation(mappedRotation);
+
+	if (GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		const FVector direction = (GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput);
+		const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshRightRotation.Z, 0);
+
+		_runMeshStartRotation = mappedRotation;
+		_runMeshEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
+		_runLerpAmount = 0;
+	}
+
+	if (_runLerpAmount >= 1)
+	{
+		GetMesh()->SetRelativeRotation(_runMeshEndRotation);
+	}
+}
+
+void ATPPlayer::ResetPreRunData(bool ForceReset)
+{
+	if (!ForceReset)
+	{
+		_runMeshStartRotation = GetMesh()->GetRelativeRotation();
+		_runMeshEndRotation = _runMeshRotation;
+		_runLerpAmount = 0;
+	}
+	else
+	{
+		GetMesh()->SetRelativeRotation(_runMeshRotation);
+	}
+}
+
 void ATPPlayer::HandleCrouchPressed()
 {
+	if (GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		ResetPreRunData();
+		RemovePlayerMovementState(EPlayerMovementState::Run);
+	}
+
 	if (GetTopPlayerState() == EPlayerMovementState::Crouch)
 	{
 		RemovePlayerMovementState(EPlayerMovementState::Crouch);
@@ -219,11 +279,27 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 
 void ATPPlayer::HandleDivePressed()
 {
+	if (_verticalInput == 0 && _horizontalInput == 0)
+	{
+		return;
+	}
+
+	if (GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		ResetPreRunData(true);
+		RemovePlayerMovementState(EPlayerMovementState::Run);
+	}
+
 	const FVector direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
+	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshRightRotation.Z, 0);
+
 	_diveDirection = direction;
+	_diveMeshRotation = GetMesh()->GetRelativeRotation();
+	_diveStartRotation = _diveMeshRotation;
+	_diveEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
+	_diveLerpAmount = 0;
 
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
-	RemovePlayerMovementState(EPlayerMovementState::Run);
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
 
@@ -235,13 +311,34 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 	if (GetTopPlayerState() == EPlayerMovementState::Dive)
 	{
 		AddMovementInput(_diveDirection, 1);
+
+		if (_diveLerpAmount < 1)
+		{
+			const FRotator mappedRotation = FMath::Lerp(_diveStartRotation, _diveEndRotation, _diveLerpAmount);
+			GetMesh()->SetRelativeRotation(mappedRotation);
+			_diveLerpAmount += DiveLerpSpeed * DeltaTime;
+
+			if (_diveLerpAmount >= 1)
+			{
+				GetMesh()->SetRelativeRotation(_diveEndRotation);
+			}
+		}
 	}
 }
 
 void ATPPlayer::HandleDiveAnimComplete()
 {
+	GetMesh()->SetRelativeRotation(_diveMeshRotation);
+
 	RemovePlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
+}
+
+void ATPPlayer::HandleDiveResetAngle()
+{
+	_diveStartRotation = GetMesh()->GetRelativeRotation();
+	_diveEndRotation = _diveMeshRotation;
+	_diveLerpAmount = 0;
 }
 
 void ATPPlayer::HandleADSPressed()
@@ -279,10 +376,11 @@ void ATPPlayer::HandleADSPressed()
 	}
 }
 
-void ATPPlayer::SetCapsuleData(float TargetHeight, float TargetRadius)
+void ATPPlayer::SetCapsuleData(float TargetHeight, float TargetRadius, float MeshTargetPosition)
 {
 	_capsuleHeight = FVector2D(TargetHeight, GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
 	_capsuleRadius = FVector2D(TargetRadius, GetCapsuleComponent()->GetUnscaledCapsuleRadius());
+	_meshLocation = FVector2D(MeshTargetPosition, GetMesh()->GetRelativeLocation().Z);
 	_capsuleLerpAmount = 0;
 }
 
@@ -295,15 +393,20 @@ void ATPPlayer::UpdateCapsuleSize(float DeltaTime)
 
 	const float currentHeight = FMath::Lerp(_capsuleHeight.Y, _capsuleHeight.X, _capsuleLerpAmount);
 	const float currentRadius = FMath::Lerp(_capsuleRadius.Y, _capsuleRadius.X, _capsuleLerpAmount);
+	const float meshLocation = FMath::Lerp(_meshLocation.Y, _meshLocation.X, _capsuleLerpAmount);
 
 	GetCapsuleComponent()->SetCapsuleHalfHeight(currentHeight);
 	GetCapsuleComponent()->SetCapsuleRadius(currentRadius);
+
+	const FVector meshRelativeLocation = GetMesh()->GetRelativeLocation();
+	GetMesh()->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, meshLocation));
 
 	_capsuleLerpAmount += CapsuleSizeLerpRate * DeltaTime;
 	if (_capsuleLerpAmount > 1)
 	{
 		GetCapsuleComponent()->SetCapsuleHalfHeight(_capsuleHeight.X);
 		GetCapsuleComponent()->SetCapsuleRadius(_capsuleRadius.X);
+		GetMesh()->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, _meshLocation.X));
 	}
 }
 
@@ -348,7 +451,7 @@ EPlayerMovementState ATPPlayer::GetTopPlayerState() const
 
 void ATPPlayer::ApplyChangesToCharacter()
 {
-	SetCapsuleData(DefaultHalfHeight, DefaultRadius);
+	SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
 
 	switch (GetTopPlayerState())
 	{
@@ -360,17 +463,17 @@ void ATPPlayer::ApplyChangesToCharacter()
 		break;
 
 	case EPlayerMovementState::Run:
-		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 		break;
 
 	case EPlayerMovementState::Crouch:
 		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
-		SetCapsuleData(CrouchHalfHeight, CrouchRadius);
+		SetCapsuleData(CrouchHalfHeight, CrouchRadius, CrouchMeshZPosition);
 		break;
 
 	case EPlayerMovementState::Dive:
 		GetCharacterMovement()->MaxWalkSpeed = DiveSpeed;
-		SetCapsuleData(CrouchHalfHeight, CrouchRadius);
+		SetCapsuleData(CrouchHalfHeight, CrouchRadius, CrouchMeshZPosition);
 		break;
 
 	default:
