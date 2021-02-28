@@ -30,7 +30,7 @@ private:
 
 	FVector2D _capsuleRadius; // X: Target, Y: Current
 	FVector2D _capsuleHeight; // X: Target, Y: Current
-	FVector2D _meshLocation;
+	FVector2D _meshLocation; // X: Target, Y: Current
 	float _capsuleLerpAmount;
 	void SetCapsuleData(const float TargetHeight, const float TargetRadius, const float MeshTargetPosition);
 	void UpdateCapsuleSize(const float DeltaTime);
@@ -45,9 +45,15 @@ private:
 	FVector _diveDirection;
 	FRotator _diveStartRotation;
 	FRotator _diveEndRotation;
-	FRotator _diveMeshRotation;
 	float _diveLerpAmount;
+	bool _acceptDiveInput;
 	void UpdateDive(const float DeltaTime);
+
+	FRotator _runStartRotation;
+	FRotator _runEndRotation;
+	float _runLerpAmount;
+	void UpdateRunMeshRotation(const float DeltaTime);
+	void ResetPreRunRotation(const bool ForceReset = false);
 
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
@@ -55,11 +61,11 @@ private:
 	void LookUpRate(const float Value);
 	void HandleJumpPressed();
 	void HandleSprintPressed();
-	void HandleSprintReleased();
 	void HandleCrouchPressed();
 	void HandleShoulderSwapPressed();
 	void HandleDivePressed();
 	void HandleADSPressed();
+	bool CanAcceptPlayerInput() const;
 
 protected:
 	virtual void BeginPlay() override;
