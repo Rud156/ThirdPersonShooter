@@ -19,7 +19,8 @@ public class ThirdPersonShooter : ModuleRules
                 "SlateCore",
                 "AIModule",
                 "GameplayTasks",
-                "NavigationSystem"
+                "NavigationSystem",
+                "UnrealEd"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });

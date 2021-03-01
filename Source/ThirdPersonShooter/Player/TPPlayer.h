@@ -14,10 +14,10 @@ class THIRDPERSONSHOOTER_API ATPPlayer : public ACharacter
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* CameraBoom;
+	class USpringArmComponent* CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
+	class UCameraComponent* FollowCamera;
 
 	float _horizontalInput;
 	float _verticalInput;
@@ -74,70 +74,70 @@ public:
 #pragma region Properties
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float BaseLookUpRate;
+	float BaseLookUpRate;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float BaseTurnRate;
+	float BaseTurnRate;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float CrouchSpeed;
+	float CrouchSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float WalkSpeed;
+	float WalkSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float RunSpeed;
+	float RunSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float RunLerpSpeed;
+	float RunLerpSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float DiveSpeed;
+	float DiveSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float DiveGetUpSpeed;
+	float DiveGetUpSpeed;
 
 	UPROPERTY(Category = "Player|Movement", EditAnywhere)
-		float DiveLerpSpeed;
+	float DiveLerpSpeed;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		FVector CameraLeftShoulder;
+	FVector CameraLeftShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		FVector CameraADSLeftShoulder;
+	FVector CameraADSLeftShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		FVector CameraRightShoulder;
+	FVector CameraRightShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		FVector CameraADSRightShoulder;
+	FVector CameraADSRightShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-		float CameraLerpSpeed;
+	float CameraLerpSpeed;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float DefaultHalfHeight;
+	float DefaultHalfHeight;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float DefaultRadius;
+	float DefaultRadius;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float CrouchHalfHeight;
+	float CrouchHalfHeight;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float CrouchRadius;
+	float CrouchRadius;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float CapsuleSizeLerpRate;
+	float CapsuleSizeLerpRate;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float DefaultMeshZPosition;
+	float DefaultMeshZPosition;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float CrouchMeshZPosition;
+	float CrouchMeshZPosition;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
-		float MeshDefaultZRotation;
+	float MeshDefaultZRotation;
 
 #pragma endregion
 
@@ -146,35 +146,35 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
-		void PlayerJumpNotify();
+	void PlayerJumpNotify();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
-		void PlayerDiveNotify();
+	void PlayerDiveNotify(const bool UseCrouchAnimation);
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
-		void ShoulderSwapNotify();
+	void ShoulderSwapNotify();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
-		void HandleDiveAnimComplete();
+	void HandleDiveAnimComplete();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
-		void HandleDiveResetAngle();
+	void HandleDiveResetAngle();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
-		EPlayerMovementState GetTopPlayerState() const;
+	EPlayerMovementState GetTopPlayerState() const;
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
-		float GetVerticalInput() const;
+	float GetVerticalInput() const;
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
-		float GetHorizontalInput() const;
+	float GetHorizontalInput() const;
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable, BlueprintPure)
-		bool IsRunning();
+	bool IsRunning();
 
 	UFUNCTION(Category = "Player|Camera", BlueprintCallable, BlueprintPure)
-		bool IsInAds();
+	bool IsInAds();
 
 	UFUNCTION(Category = "Player|Camera", BlueprintCallable, BlueprintPure)
-		bool IsLeftShoulder();
+	bool IsLeftShoulder();
 };

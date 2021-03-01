@@ -10,6 +10,9 @@
 #include "GameFramework/SpringArmComponent.h"
 
 #include "Kismet/KismetMathLibrary.h"
+#if WITH_EDITOR
+#include "UnrealEd.h"
+#endif
 
 ATPPlayer::ATPPlayer()
 {
@@ -63,7 +66,8 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleJumpPressed);
 	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleSprintPressed);
 	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
-	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
+	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this,
+	                                 &ATPPlayer::HandleShoulderSwapPressed);
 	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
 	PlayerInputComponent->BindAction("ADS", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleADSPressed);
 
@@ -291,17 +295,21 @@ void ATPPlayer::HandleDivePressed()
 		return;
 	}
 
-	if (_verticalInput == 0 && _horizontalInput == 0)
-	{
-		return;
-	}
-
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
 		ResetPreRunRotation(true);
 	}
 
-	const FVector direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
+	FVector direction;
+	if (_horizontalInput == 0 && _verticalInput == 0)
+	{
+		direction = GetActorForwardVector();
+	}
+	else
+	{
+		direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
+	}
+
 	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshDefaultZRotation, 0);
 
 	_diveDirection = direction;
@@ -309,46 +317,56 @@ void ATPPlayer::HandleDivePressed()
 	_diveEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
 	_diveLerpAmount = 0;
 	_acceptDiveInput = false;
+	bUseControllerRotationYaw = false;
 
-	RemovePlayerMovementState(EPlayerMovementState::Run);
-	RemovePlayerMovementState(EPlayerMovementState::Crouch);
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
 
-	PlayerDiveNotify();
+	PlayerDiveNotify(HasPlayerState(EPlayerMovementState::Crouch));
 }
 
 void ATPPlayer::UpdateDive(const float DeltaTime)
 {
-	if (GetTopPlayerState() == EPlayerMovementState::Dive)
+	if (GetTopPlayerState() != EPlayerMovementState::Dive)
 	{
-		if (!_acceptDiveInput)
-		{
-			AddMovementInput(_diveDirection, 1);
-		}
-		else
-		{
-			const FVector direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
-			AddMovementInput(direction, 1);
-		}
+		return;
+	}
 
-		if (_diveLerpAmount < 1)
-		{
-			const FRotator mappedRotation = FMath::Lerp(_diveStartRotation, _diveEndRotation, _diveLerpAmount);
-			GetMesh()->SetRelativeRotation(mappedRotation);
-			_diveLerpAmount += DiveLerpSpeed * DeltaTime;
+	if (!_acceptDiveInput)
+	{
+		AddMovementInput(_diveDirection, 1);
+	}
+	else
+	{
+		const FVector direction = UKismetMathLibrary::GetForwardVector(GetControlRotation()) * _verticalInput +
+			UKismetMathLibrary::GetRightVector(GetControlRotation()) * _horizontalInput;
+		AddMovementInput(direction, 1);
 
-			if (_diveLerpAmount >= 1)
-			{
-				GetMesh()->SetRelativeRotation(_diveEndRotation);
-			}
+		SetActorRotation(FRotator(0, GetControlRotation().Yaw, 0));
+	}
+
+	if (_diveLerpAmount < 1)
+	{
+		const FRotator mappedRotation = FMath::Lerp(_diveStartRotation, _diveEndRotation, _diveLerpAmount);
+		GetMesh()->SetRelativeRotation(mappedRotation);
+		_diveLerpAmount += DiveLerpSpeed * DeltaTime;
+
+		if (_diveLerpAmount >= 1)
+		{
+			GetMesh()->SetRelativeRotation(_diveEndRotation);
 		}
 	}
 }
 
 void ATPPlayer::HandleDiveAnimComplete()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Dive Animation Complete"));
+// #if WITH_EDITOR
+// 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+// #endif
+
 	GetMesh()->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
+	bUseControllerRotationYaw = true;
 
 	RemovePlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
@@ -480,18 +498,19 @@ EPlayerMovementState ATPPlayer::GetTopPlayerState() const
 
 void ATPPlayer::ApplyChangesToCharacter()
 {
-	SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
-
 	switch (GetTopPlayerState())
 	{
 	case EPlayerMovementState::None:
+		SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
 		break;
 
 	case EPlayerMovementState::Walk:
+		SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 		break;
 
 	case EPlayerMovementState::Run:
+		SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
 		GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 		break;
 
@@ -505,6 +524,7 @@ void ATPPlayer::ApplyChangesToCharacter()
 		break;
 
 	default:
+		SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
 		break;
 	}
 }
