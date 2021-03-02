@@ -360,7 +360,6 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 
 void ATPPlayer::HandleDiveAnimComplete()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Dive Animation Complete"));
 // #if WITH_EDITOR
 // 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
 // #endif
@@ -386,6 +385,7 @@ void ATPPlayer::HandleADSPressed()
 {
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
+		ResetPreRunRotation();
 		RemovePlayerMovementState(EPlayerMovementState::Run);
 		ApplyChangesToCharacter();
 	}
