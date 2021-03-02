@@ -35,6 +35,10 @@ private:
 	void SetCapsuleData(const float TargetHeight, const float TargetRadius, const float MeshTargetPosition);
 	void UpdateCapsuleSize(const float DeltaTime);
 
+	bool _lastFrameFalling;
+	bool _isAdsBeforeFalling;
+	void UpdateFalling(const float DeltaTime);
+
 	bool _isLeftShoulder;
 	bool _isInAds;
 	float _shoulderCameraLerpAmount;

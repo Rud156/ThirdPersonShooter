@@ -53,6 +53,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateCapsuleSize(DeltaTime);
+	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
 	UpdateRunMeshRotation(DeltaTime);
@@ -66,8 +67,7 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleJumpPressed);
 	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleSprintPressed);
 	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
-	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this,
-	                                 &ATPPlayer::HandleShoulderSwapPressed);
+	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
 	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
 	PlayerInputComponent->BindAction("ADS", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleADSPressed);
 
@@ -149,6 +149,33 @@ void ATPPlayer::HandleJumpPressed()
 
 	PlayerJumpNotify();
 	Jump();
+}
+
+void ATPPlayer::UpdateFalling(const float DeltaTime)
+{
+	const bool isFalling = GetCharacterMovement()->IsFalling();
+
+	if (!isFalling && _lastFrameFalling)
+	{
+		if (_isAdsBeforeFalling)
+		{
+			HandleADSPressed();
+		}
+	}
+	else if (isFalling && !_lastFrameFalling)
+	{
+		if (_isInAds)
+		{
+			_isAdsBeforeFalling = true;
+			HandleADSPressed();
+		}
+		else
+		{
+			_isAdsBeforeFalling = false;
+		}
+	}
+
+	_lastFrameFalling = isFalling;
 }
 
 void ATPPlayer::HandleSprintPressed()
@@ -300,6 +327,11 @@ void ATPPlayer::HandleDivePressed()
 		ResetPreRunRotation(true);
 	}
 
+	if (_isInAds)
+	{
+		HandleADSPressed();
+	}
+
 	FVector direction;
 	if (_horizontalInput == 0 && _verticalInput == 0)
 	{
@@ -360,15 +392,22 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 
 void ATPPlayer::HandleDiveAnimComplete()
 {
-// #if WITH_EDITOR
-// 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
-// #endif
+	// #if WITH_EDITOR
+	// 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+	// #endif
 
 	GetMesh()->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
 	bUseControllerRotationYaw = true;
 
 	RemovePlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
+
+	if (GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		_runStartRotation = FRotator(0, MeshDefaultZRotation, 0);
+		_runEndRotation = _runStartRotation;
+		_runLerpAmount = 0;
+	}
 }
 
 void ATPPlayer::HandleDiveResetAngle()
