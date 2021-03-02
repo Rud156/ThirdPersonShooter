@@ -59,6 +59,9 @@ private:
 	void UpdateRunMeshRotation(const float DeltaTime);
 	void ResetPreRunRotation(const bool ForceReset = false);
 
+	void ForwardTrace();
+	void HeightTrace();
+
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
 	void TurnAtRate(const float Value);

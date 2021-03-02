@@ -155,14 +155,14 @@ void ATPPlayer::UpdateFalling(const float DeltaTime)
 {
 	const bool isFalling = GetCharacterMovement()->IsFalling();
 
-	if (!isFalling && _lastFrameFalling)
+	if (!isFalling && _lastFrameFalling) // Handle Character Landed...
 	{
 		if (_isAdsBeforeFalling)
 		{
 			HandleADSPressed();
 		}
 	}
-	else if (isFalling && !_lastFrameFalling)
+	else if (isFalling && !_lastFrameFalling) // Handle Character Jumped...
 	{
 		if (_isInAds)
 		{
@@ -212,12 +212,22 @@ void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
 
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
-		const FVector direction = (GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput);
-		const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshDefaultZRotation, 0);
+		const bool isInAir = GetCharacterMovement()->IsFalling();
+		if (!isInAir)
+		{
+			const FVector direction = (GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput);
+			const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshDefaultZRotation, 0);
 
-		_runStartRotation = mappedRotation;
-		_runEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
-		_runLerpAmount = 0;
+			_runStartRotation = mappedRotation;
+			_runEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
+			_runLerpAmount = 0;
+		}
+		else
+		{
+			_runStartRotation = GetMesh()->GetRelativeRotation();
+			_runEndRotation = FRotator(0, DefaultMeshZPosition, 0);
+			_runLerpAmount = 0;
+		}
 	}
 
 	if (_runLerpAmount >= 1)
@@ -566,6 +576,14 @@ void ATPPlayer::ApplyChangesToCharacter()
 		SetCapsuleData(DefaultHalfHeight, DefaultRadius, DefaultMeshZPosition);
 		break;
 	}
+}
+
+void ATPPlayer::ForwardTrace()
+{
+}
+
+void ATPPlayer::HeightTrace()
+{
 }
 
 float ATPPlayer::GetVerticalInput() const
