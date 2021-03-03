@@ -156,9 +156,9 @@ void ATPPlayer::HandleJumpPressed()
 
 		if (forwardTrace && heightTrace)
 		{
-			// #if WITH_EDITOR
-			// 			GUnrealEd->PlayWorld->bDebugPauseExecution = true;
-			// #endif
+// #if WITH_EDITOR
+// 			GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+// #endif
 			return;
 		}
 	}
@@ -632,7 +632,9 @@ bool ATPPlayer::HeightTrace()
 		const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
 		const float difference = socketLocation.Z - hitLocation.Z;
 
-		if (!_isClimbing && difference >= -WallClimbHeight && difference <= 1)
+		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Height: " + FString::SanitizeFloat(difference));
+
+		if (!_isClimbing && difference >= -WallClimbHeight && difference <= -WallClimbMinHeight)
 		{
 			ResetPreRunRotation();
 			if (_isInAds)
@@ -649,7 +651,6 @@ bool ATPPlayer::HeightTrace()
 			const FRotator targetRotation = UKismetMathLibrary::MakeRotFromX(_wallNormal * -1);
 			const FVector newPosition = _wallNormal * ClimbAnimXOffset + _wallLocation;
 			const FVector delta = FVector(newPosition.X, newPosition.Y, _heightLocation.Z - ClimbAnimZOffset);
-
 
 			_isClimbing = true;
 			PlayerClimbNotify(targetRotation, delta);
