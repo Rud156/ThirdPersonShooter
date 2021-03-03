@@ -28,9 +28,6 @@ private:
 	bool HasPlayerState(const EPlayerMovementState MovementState);
 	void ApplyChangesToCharacter();
 
-	bool _isJumpPressed;
-	void UpdateJump(const float DeltaTime);
-
 	FVector2D _capsuleRadius; // X: Target, Y: Current
 	FVector2D _capsuleHeight; // X: Target, Y: Current
 	FVector2D _meshLocation; // X: Target, Y: Current
@@ -65,12 +62,18 @@ private:
 	void UpdateRunMeshRotation(const float DeltaTime);
 	void ResetPreRunRotation(const bool ForceReset = false);
 
+	bool _isRunningBeforeTrace;
+	bool _isJumpPressed;
 	bool _isClimbing;
-	FVector _wallNormal;
-	FVector _wallLocation;
-	FVector _heightLocation;
-	bool ForwardTrace();
-	bool HeightTrace();
+	FHitResult _forwardTrace;
+	FHitResult _heightTrace;
+	FHitResult _forwardHeightTrace;
+	bool WallClimbForwardTrace();
+	bool WallClimbHeightTrace();
+	bool VaultForwardHeightTrace();
+	bool HandleWallClimb();
+	bool HandleVault();
+	void UpdateWallClimbCheck(const float DeltaTime);
 
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
@@ -163,17 +166,29 @@ public:
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 	float MeshDefaultZRotation;
 
-	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float WallClimbForwardCheck;
 
-	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float WallClimbHeightForwardCheck;
 
-	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	FVector WallClimbUpOffset;
 
-	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	FVector WallClimbUpDownOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	float ClimbAnimXOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	float ClimbAnimZOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	float VaultAnimXOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	float VaultAnimZOffset;
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float WallClimbHeight;
@@ -182,10 +197,13 @@ public:
 	float WallClimbMinHeight;
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
-	float ClimbAnimXOffset;
+	float VaultWallHeight;
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
-	float ClimbAnimZOffset;
+	float VaultWallMinHeight;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float VaultThicknessDistance;
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	FName WallClimbableTag;
@@ -208,8 +226,14 @@ public:
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
 	void PlayerClimbNotify(FRotator TargetRotation, FVector Delta);
 
+	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
+	void PlayerVaultNotify(FRotator TargetRotation, FVector Delta);
+
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 	void HandleClimbAnimComplete();
+
+	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
+	void HandleVaultAnimComplete();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 	void HandleDiveAnimComplete();

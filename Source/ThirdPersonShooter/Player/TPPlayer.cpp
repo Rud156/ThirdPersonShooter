@@ -56,7 +56,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateCapsuleSize(DeltaTime);
-	UpdateJump(DeltaTime);
+	UpdateWallClimbCheck(DeltaTime);
 	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
@@ -161,15 +161,6 @@ void ATPPlayer::HandleJumpPressed()
 void ATPPlayer::HandleJumpReleased()
 {
 	_isJumpPressed = false;
-}
-
-void ATPPlayer::UpdateJump(const float DeltaTime)
-{
-	if (_verticalInput == 1 && _isJumpPressed)
-	{
-		ForwardTrace();
-		HeightTrace();
-	}
 }
 
 void ATPPlayer::UpdateFalling(const float DeltaTime)
@@ -630,7 +621,7 @@ void ATPPlayer::ApplyChangesToCharacter()
 	}
 }
 
-bool ATPPlayer::ForwardTrace()
+bool ATPPlayer::WallClimbForwardTrace()
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FHitResult hitResult;
@@ -649,9 +640,7 @@ bool ATPPlayer::ForwardTrace()
 
 		if (hasTag)
 		{
-			_wallNormal = hitResult.Normal;
-			_wallLocation = hitResult.Location;
-
+			_forwardTrace = hitResult;
 			return true;
 		}
 	}
@@ -659,7 +648,7 @@ bool ATPPlayer::ForwardTrace()
 	return false;
 }
 
-bool ATPPlayer::HeightTrace()
+bool ATPPlayer::WallClimbHeightTrace()
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FHitResult hitResult;
@@ -676,50 +665,188 @@ bool ATPPlayer::HeightTrace()
 			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
 		}
 
-		if(!hasTag)
+		if (!hasTag)
 		{
 			return false;
 		}
-		
-		_heightLocation = hitResult.Location;
 
-		const FVector hitLocation = hitResult.Location;
-		const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
-		const float difference = socketLocation.Z - hitLocation.Z;
-
-		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Height: " + FString::SanitizeFloat(difference));
-
-		if (!_isClimbing && difference >= -WallClimbHeight && difference <= -WallClimbMinHeight)
-		{
-			ResetPreRunRotation();
-			if (_isInAds)
-			{
-				HandleADSPressed();
-			}
-
-			GetCharacterMovement()->StopMovementImmediately();
-			RemovePlayerMovementState(EPlayerMovementState::Run);
-			RemovePlayerMovementState(EPlayerMovementState::Crouch);
-			ApplyChangesToCharacter();
-
-
-			const FRotator targetRotation = UKismetMathLibrary::MakeRotFromX(_wallNormal * -1);
-			const FVector newPosition = _wallNormal * ClimbAnimXOffset + _wallLocation;
-			const FVector delta = FVector(newPosition.X, newPosition.Y, _heightLocation.Z - ClimbAnimZOffset);
-
-			_isClimbing = true;
-			PlayerClimbNotify(targetRotation, delta);
-
-			return true;
-		}
+		_heightTrace = hitResult;
+		return true;
 	}
 
 	return false;
 }
 
+bool ATPPlayer::VaultForwardHeightTrace()
+{
+	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
+	FHitResult hitResult;
+
+	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * (WallClimbHeightForwardCheck + VaultThicknessDistance);
+	const FVector endLocation = startLocation - WallClimbUpDownOffset;
+
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
+	if (didCollide)
+	{
+		bool hasTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
+		if (!hasTag)
+		{
+			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
+		}
+
+		if (!hasTag)
+		{
+			return false;
+		}
+
+		_forwardHeightTrace = hitResult;
+		return true;
+	}
+
+	return false;
+}
+
+bool ATPPlayer::HandleWallClimb()
+{
+	const FVector wallNormal = _forwardTrace.Normal;
+	const FVector wallLocation = _forwardTrace.Location;
+
+	const FVector heightLocation = _heightTrace.Location;
+
+	const FVector hitLocation = _heightTrace.Location;
+	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
+	const float difference = socketLocation.Z - hitLocation.Z;
+
+	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Climb Height: " + FString::SanitizeFloat(difference));
+
+	if (!_isClimbing && difference >= -WallClimbHeight && difference <= -WallClimbMinHeight)
+	{
+		ResetPreRunRotation();
+		if (_isInAds)
+		{
+			HandleADSPressed();
+		}
+
+		if (HasPlayerState(EPlayerMovementState::Run))
+		{
+			_isRunningBeforeTrace = true;
+		}
+		else
+		{
+			_isRunningBeforeTrace = false;
+		}
+
+		GetCharacterMovement()->StopMovementImmediately();
+		RemovePlayerMovementState(EPlayerMovementState::Run);
+		RemovePlayerMovementState(EPlayerMovementState::Crouch);
+		ApplyChangesToCharacter();
+
+		const FRotator targetRotation = UKismetMathLibrary::MakeRotFromX(wallNormal * -1);
+		const FVector newPosition = wallNormal * ClimbAnimXOffset + wallLocation;
+		const FVector delta = FVector(newPosition.X, newPosition.Y, heightLocation.Z - ClimbAnimZOffset);
+
+		_isClimbing = true;
+		PlayerClimbNotify(targetRotation, delta);
+
+		return true;
+	}
+
+	return false;
+}
+
+bool ATPPlayer::HandleVault()
+{
+	const FVector wallNormal = _forwardTrace.Normal;
+	const FVector wallLocation = _forwardTrace.Location;
+
+	const FVector heightLocation = _heightTrace.Location;
+
+	const FVector hitLocation = _heightTrace.Location;
+	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
+	const float difference = socketLocation.Z - hitLocation.Z;
+
+	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Vault Height: " + FString::SanitizeFloat(difference));
+
+	if (!_isClimbing && difference >= VaultWallMinHeight && difference <= VaultWallHeight)
+	{
+		ResetPreRunRotation();
+		if (_isInAds)
+		{
+			HandleADSPressed();
+		}
+
+		if (HasPlayerState(EPlayerMovementState::Run))
+		{
+			_isRunningBeforeTrace = true;
+		}
+		else
+		{
+			_isRunningBeforeTrace = false;
+		}
+
+		GetCharacterMovement()->StopMovementImmediately();
+		RemovePlayerMovementState(EPlayerMovementState::Run);
+		RemovePlayerMovementState(EPlayerMovementState::Crouch);
+		ApplyChangesToCharacter();
+
+		const FRotator targetRotation = UKismetMathLibrary::MakeRotFromX(wallNormal * -1);
+		const FVector newPosition = wallNormal * VaultAnimXOffset + wallLocation;
+		const FVector delta = FVector(newPosition.X, newPosition.Y, heightLocation.Z - VaultAnimZOffset);
+
+		_isClimbing = true;
+		PlayerVaultNotify(targetRotation, delta);
+
+		// #if WITH_EDITOR
+		// 		GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+		// #endif
+
+		return true;
+	}
+
+	return false;
+}
+
+void ATPPlayer::UpdateWallClimbCheck(const float DeltaTime)
+{
+	if (_verticalInput == 1 && _isJumpPressed && !_isClimbing)
+	{
+		const bool forwardTrace = WallClimbForwardTrace();
+		const bool heightTrace = WallClimbHeightTrace();
+		const bool forwardHeightTrace = VaultForwardHeightTrace();
+
+		if (forwardTrace && heightTrace && forwardHeightTrace)
+		{
+			const bool vaulted = HandleVault();
+			if (!vaulted)
+			{
+				HandleWallClimb();
+			}
+		}
+		else if (forwardTrace && heightTrace)
+		{
+			HandleWallClimb();
+		}
+	}
+}
+
 void ATPPlayer::HandleClimbAnimComplete()
 {
 	_isClimbing = false;
+
+	if (_isRunningBeforeTrace)
+	{
+		HandleSprintPressed();
+	}
+}
+
+void ATPPlayer::HandleVaultAnimComplete()
+{
+	_isClimbing = false;
+
+	if (_isRunningBeforeTrace)
+	{
+		HandleSprintPressed();
+	}
 }
 
 float ATPPlayer::GetVerticalInput() const
