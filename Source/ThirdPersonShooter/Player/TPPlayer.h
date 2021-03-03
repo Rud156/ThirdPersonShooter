@@ -47,8 +47,9 @@ private:
 	float _shoulderCameraLerpAmount;
 	FVector _shoulderStartPosition;
 	FVector _shoulderEndPosition;
+	FVector2D _cameraBoomLength; // X: Target, Y: Current
 	void UpdateShoulderCamera(const float DeltaTime);
-	
+
 	bool CanAcceptADSInput() const;
 
 	FVector _diveDirection;
@@ -131,6 +132,12 @@ public:
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 	float CameraLerpSpeed;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+	float CameraDefaultBoomLength;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+	float CameraADSBoomLength;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 	float DefaultHalfHeight;

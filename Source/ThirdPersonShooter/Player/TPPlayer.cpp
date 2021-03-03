@@ -46,6 +46,7 @@ void ATPPlayer::BeginPlay()
 	_isLeftShoulder = false;
 	_shoulderStartPosition = CameraRightShoulder;
 	_shoulderEndPosition = CameraRightShoulder;
+	_cameraBoomLength = FVector2D(CameraDefaultBoomLength, CameraDefaultBoomLength);
 	_shoulderCameraLerpAmount = 0;
 	_runLerpAmount = 1;
 }
@@ -300,6 +301,7 @@ void ATPPlayer::HandleShoulderSwapPressed()
 {
 	_isLeftShoulder = !_isLeftShoulder;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
+	_cameraBoomLength = FVector2D(0, CameraBoom->TargetArmLength);
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -307,10 +309,12 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		if (_isInAds)
 		{
 			_shoulderEndPosition = CameraADSLeftShoulder;
+			_cameraBoomLength.X = CameraADSBoomLength;
 		}
 		else
 		{
 			_shoulderEndPosition = CameraLeftShoulder;
+			_cameraBoomLength.X = CameraDefaultBoomLength;
 		}
 	}
 	else
@@ -318,10 +322,12 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		if (_isInAds)
 		{
 			_shoulderEndPosition = CameraADSRightShoulder;
+			_cameraBoomLength.X = CameraADSBoomLength;
 		}
 		else
 		{
 			_shoulderEndPosition = CameraRightShoulder;
+			_cameraBoomLength.X = CameraDefaultBoomLength;
 		}
 	}
 
@@ -338,11 +344,15 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 	const FVector mappedLocation = FMath::Lerp(_shoulderStartPosition, _shoulderEndPosition, _shoulderCameraLerpAmount);
 	FollowCamera->SetRelativeLocation(mappedLocation);
 
+	const float mappedBoomLength = FMath::Lerp(_cameraBoomLength.Y, _cameraBoomLength.X, _shoulderCameraLerpAmount);
+	CameraBoom->TargetArmLength = mappedBoomLength;
+
 	_shoulderCameraLerpAmount += CameraLerpSpeed * DeltaTime;
 
 	if (_shoulderCameraLerpAmount >= 1)
 	{
 		FollowCamera->SetRelativeLocation(_shoulderEndPosition);
+		CameraBoom->TargetArmLength = _cameraBoomLength.X;
 	}
 }
 
@@ -463,6 +473,7 @@ void ATPPlayer::HandleADSPressed()
 
 	_isInAds = !_isInAds;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
+	_cameraBoomLength = FVector2D(0, CameraBoom->TargetArmLength );
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -470,10 +481,12 @@ void ATPPlayer::HandleADSPressed()
 		if (_isInAds)
 		{
 			_shoulderEndPosition = CameraADSLeftShoulder;
+			_cameraBoomLength.X = CameraADSBoomLength;
 		}
 		else
 		{
 			_shoulderEndPosition = CameraLeftShoulder;
+			_cameraBoomLength.X = CameraDefaultBoomLength;
 		}
 	}
 	else
@@ -481,10 +494,12 @@ void ATPPlayer::HandleADSPressed()
 		if (_isInAds)
 		{
 			_shoulderEndPosition = CameraADSRightShoulder;
+			_cameraBoomLength.X = CameraADSBoomLength;
 		}
 		else
 		{
 			_shoulderEndPosition = CameraRightShoulder;
+			_cameraBoomLength.X = CameraDefaultBoomLength;
 		}
 	}
 }
