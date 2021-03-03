@@ -59,8 +59,12 @@ private:
 	void UpdateRunMeshRotation(const float DeltaTime);
 	void ResetPreRunRotation(const bool ForceReset = false);
 
-	void ForwardTrace();
-	void HeightTrace();
+	bool _isClimbing;
+	FVector _wallNormal;
+	FVector _wallLocation;
+	FVector _heightLocation;
+	bool ForwardTrace();
+	bool HeightTrace();
 
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
@@ -146,6 +150,30 @@ public:
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 	float MeshDefaultZRotation;
 
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float WallClimbForwardCheck;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float WallClimbHeightForwardCheck;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	FVector WallClimbUpOffset;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	FVector WallClimbUpDownOffset;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float WallClimbHeight;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float WallClimbMinHeight;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float ClimbAnimXOffset;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	float ClimbAnimZOffset;
+
 #pragma endregion
 
 	ATPPlayer();
@@ -160,6 +188,12 @@ public:
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
 	void ShoulderSwapNotify();
+
+	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
+	void PlayerClimbNotify(FRotator TargetRotation, FVector Delta);
+
+	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
+	void HandleClimbAnimComplete();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 	void HandleDiveAnimComplete();

@@ -10,6 +10,8 @@
 #include "GameFramework/SpringArmComponent.h"
 
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+
 #if WITH_EDITOR
 #include "UnrealEd.h"
 #endif
@@ -145,6 +147,20 @@ void ATPPlayer::HandleJumpPressed()
 		RemovePlayerMovementState(EPlayerMovementState::Crouch);
 		ApplyChangesToCharacter();
 		return;
+	}
+
+	if (_verticalInput == 1)
+	{
+		const bool forwardTrace = ForwardTrace();
+		const bool heightTrace = HeightTrace();
+
+		if (forwardTrace && heightTrace)
+		{
+			// #if WITH_EDITOR
+			// 			GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+			// #endif
+			return;
+		}
 	}
 
 	PlayerJumpNotify();
@@ -402,10 +418,6 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 
 void ATPPlayer::HandleDiveAnimComplete()
 {
-	// #if WITH_EDITOR
-	// 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
-	// #endif
-
 	GetMesh()->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
 	bUseControllerRotationYaw = true;
 
@@ -469,7 +481,12 @@ void ATPPlayer::HandleADSPressed()
 
 bool ATPPlayer::CanAcceptPlayerInput() const
 {
-	return GetTopPlayerState() != EPlayerMovementState::Dive;
+	if (GetTopPlayerState() == EPlayerMovementState::Dive || _isClimbing)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void ATPPlayer::SetCapsuleData(float TargetHeight, float TargetRadius, float MeshTargetPosition)
@@ -564,8 +581,8 @@ void ATPPlayer::ApplyChangesToCharacter()
 		break;
 
 	case EPlayerMovementState::Crouch:
-		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 		SetCapsuleData(CrouchHalfHeight, CrouchRadius, CrouchMeshZPosition);
+		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 		break;
 
 	case EPlayerMovementState::Dive:
@@ -578,12 +595,75 @@ void ATPPlayer::ApplyChangesToCharacter()
 	}
 }
 
-void ATPPlayer::ForwardTrace()
+bool ATPPlayer::ForwardTrace()
 {
+	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
+	FHitResult hitResult;
+
+	const FVector startLocation = GetActorLocation();
+	const FVector endLocation = GetActorForwardVector() * WallClimbForwardCheck + startLocation;
+
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
+	if (didCollide)
+	{
+		_wallNormal = hitResult.Normal;
+		_wallLocation = hitResult.Location;
+
+		return true;
+	}
+
+	return false;
 }
 
-void ATPPlayer::HeightTrace()
+bool ATPPlayer::HeightTrace()
 {
+	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
+	FHitResult hitResult;
+
+	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * WallClimbHeightForwardCheck;
+	const FVector endLocation = startLocation - WallClimbUpDownOffset;
+
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
+	if (didCollide)
+	{
+		_heightLocation = hitResult.Location;
+
+		const FVector hitLocation = hitResult.Location;
+		const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
+		const float difference = socketLocation.Z - hitLocation.Z;
+
+		if (!_isClimbing && difference >= -WallClimbHeight && difference <= 1)
+		{
+			ResetPreRunRotation();
+			if (_isInAds)
+			{
+				HandleADSPressed();
+			}
+
+			GetCharacterMovement()->StopMovementImmediately();
+			RemovePlayerMovementState(EPlayerMovementState::Run);
+			RemovePlayerMovementState(EPlayerMovementState::Crouch);
+			ApplyChangesToCharacter();
+
+
+			const FRotator targetRotation = UKismetMathLibrary::MakeRotFromX(_wallNormal * -1);
+			const FVector newPosition = _wallNormal * ClimbAnimXOffset + _wallLocation;
+			const FVector delta = FVector(newPosition.X, newPosition.Y, _heightLocation.Z - ClimbAnimZOffset);
+
+
+			_isClimbing = true;
+			PlayerClimbNotify(targetRotation, delta);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void ATPPlayer::HandleClimbAnimComplete()
+{
+	_isClimbing = false;
 }
 
 float ATPPlayer::GetVerticalInput() const
