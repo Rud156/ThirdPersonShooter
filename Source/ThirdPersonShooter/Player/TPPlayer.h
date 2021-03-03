@@ -131,13 +131,13 @@ public:
 	FVector CameraADSRightShoulder;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
-	float CameraLerpSpeed;
-
-	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 	float CameraDefaultBoomLength;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 	float CameraADSBoomLength;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+	float CameraLerpSpeed;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
 	float DefaultHalfHeight;
@@ -186,6 +186,9 @@ public:
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float ClimbAnimZOffset;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	FName WallClimbableTag;
 
 #pragma endregion
 

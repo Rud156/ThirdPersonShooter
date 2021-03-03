@@ -473,7 +473,7 @@ void ATPPlayer::HandleADSPressed()
 
 	_isInAds = !_isInAds;
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
-	_cameraBoomLength = FVector2D(0, CameraBoom->TargetArmLength );
+	_cameraBoomLength = FVector2D(0, CameraBoom->TargetArmLength);
 	_shoulderCameraLerpAmount = 0;
 
 	if (_isLeftShoulder)
@@ -641,10 +641,19 @@ bool ATPPlayer::ForwardTrace()
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		_wallNormal = hitResult.Normal;
-		_wallLocation = hitResult.Location;
+		bool hasTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
+		if (!hasTag)
+		{
+			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
+		}
 
-		return true;
+		if (hasTag)
+		{
+			_wallNormal = hitResult.Normal;
+			_wallLocation = hitResult.Location;
+
+			return true;
+		}
 	}
 
 	return false;
@@ -661,6 +670,17 @@ bool ATPPlayer::HeightTrace()
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
+		bool hasTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
+		if (!hasTag)
+		{
+			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
+		}
+
+		if(!hasTag)
+		{
+			return false;
+		}
+		
 		_heightLocation = hitResult.Location;
 
 		const FVector hitLocation = hitResult.Location;
