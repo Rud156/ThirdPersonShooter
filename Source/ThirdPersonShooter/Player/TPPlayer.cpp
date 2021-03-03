@@ -177,6 +177,7 @@ void ATPPlayer::UpdateFalling(const float DeltaTime)
 
 	if (!isFalling && _lastFrameFalling) // Handle Character Landed...
 	{
+		_lastFrameFalling = isFalling;
 		if (_isAdsBeforeFalling)
 		{
 			HandleADSPressed();
@@ -448,6 +449,11 @@ void ATPPlayer::HandleDiveResetAngle()
 
 void ATPPlayer::HandleADSPressed()
 {
+	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive)
+	{
+		return;
+	}
+
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
 		ResetPreRunRotation();
