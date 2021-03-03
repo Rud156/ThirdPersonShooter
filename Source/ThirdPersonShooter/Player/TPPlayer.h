@@ -28,6 +28,9 @@ private:
 	bool HasPlayerState(const EPlayerMovementState MovementState);
 	void ApplyChangesToCharacter();
 
+	bool _isJumpPressed;
+	void UpdateJump(const float DeltaTime);
+
 	FVector2D _capsuleRadius; // X: Target, Y: Current
 	FVector2D _capsuleHeight; // X: Target, Y: Current
 	FVector2D _meshLocation; // X: Target, Y: Current
@@ -71,6 +74,7 @@ private:
 	void TurnAtRate(const float Value);
 	void LookUpRate(const float Value);
 	void HandleJumpPressed();
+	void HandleJumpReleased();
 	void HandleSprintPressed();
 	void HandleCrouchPressed();
 	void HandleShoulderSwapPressed();

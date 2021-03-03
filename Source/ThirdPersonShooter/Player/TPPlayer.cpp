@@ -55,6 +55,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateCapsuleSize(DeltaTime);
+	UpdateJump(DeltaTime);
 	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
@@ -67,6 +68,7 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	check(PlayerInputComponent);
 
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleJumpPressed);
+	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Released, this, &ATPPlayer::HandleJumpReleased);
 	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleSprintPressed);
 	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
 	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
@@ -142,6 +144,8 @@ void ATPPlayer::HandleJumpPressed()
 		return;
 	}
 
+	_isJumpPressed = true;
+
 	if (GetTopPlayerState() == EPlayerMovementState::Crouch)
 	{
 		RemovePlayerMovementState(EPlayerMovementState::Crouch);
@@ -149,22 +153,22 @@ void ATPPlayer::HandleJumpPressed()
 		return;
 	}
 
-	if (_verticalInput == 1)
-	{
-		const bool forwardTrace = ForwardTrace();
-		const bool heightTrace = HeightTrace();
-
-		if (forwardTrace && heightTrace)
-		{
-// #if WITH_EDITOR
-// 			GUnrealEd->PlayWorld->bDebugPauseExecution = true;
-// #endif
-			return;
-		}
-	}
-
 	PlayerJumpNotify();
 	Jump();
+}
+
+void ATPPlayer::HandleJumpReleased()
+{
+	_isJumpPressed = false;
+}
+
+void ATPPlayer::UpdateJump(const float DeltaTime)
+{
+	if (_verticalInput == 1 && _isJumpPressed)
+	{
+		ForwardTrace();
+		HeightTrace();
+	}
 }
 
 void ATPPlayer::UpdateFalling(const float DeltaTime)
