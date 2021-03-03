@@ -48,6 +48,8 @@ private:
 	FVector _shoulderStartPosition;
 	FVector _shoulderEndPosition;
 	void UpdateShoulderCamera(const float DeltaTime);
+	
+	bool CanAcceptADSInput() const;
 
 	FVector _diveDirection;
 	FRotator _diveStartRotation;

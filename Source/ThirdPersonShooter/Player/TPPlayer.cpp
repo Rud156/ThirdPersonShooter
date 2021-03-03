@@ -449,7 +449,7 @@ void ATPPlayer::HandleDiveResetAngle()
 
 void ATPPlayer::HandleADSPressed()
 {
-	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive)
+	if (!CanAcceptADSInput())
 	{
 		return;
 	}
@@ -487,6 +487,16 @@ void ATPPlayer::HandleADSPressed()
 			_shoulderEndPosition = CameraRightShoulder;
 		}
 	}
+}
+
+bool ATPPlayer::CanAcceptADSInput() const
+{
+	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive || _isClimbing)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool ATPPlayer::CanAcceptPlayerInput() const
