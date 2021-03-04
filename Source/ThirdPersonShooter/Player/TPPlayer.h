@@ -140,6 +140,12 @@ public:
 	float CameraADSBoomLength;
 
 	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+	FVector RunCameraLeftPosition;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
+	FVector RunCameraRightPosition;
+
+	UPROPERTY(Category = "Player|Camera", EditAnywhere)
 	float CameraLerpSpeed;
 
 	UPROPERTY(Category = "Player|Size", EditAnywhere)
