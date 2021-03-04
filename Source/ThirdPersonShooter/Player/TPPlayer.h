@@ -185,6 +185,12 @@ public:
 	FVector WallClimbUpDownOffset;
 
 	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	FVector VaultDownOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	float VaultDownZDiffOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float ClimbAnimXOffset;
 
 	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
@@ -210,6 +216,9 @@ public:
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float VaultThicknessDistance;
+
+	UPROPERTY(Category = "Player|WallClimb", BlueprintReadOnly)
+	float VaultDownDistance;
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	FName WallClimbableTag;

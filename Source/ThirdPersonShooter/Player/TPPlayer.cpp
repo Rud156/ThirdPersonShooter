@@ -16,6 +16,10 @@
 #include "UnrealEd.h"
 #endif
 
+// #if WITH_EDITOR
+// 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+// #endif
+
 ATPPlayer::ATPPlayer()
 {
 	bUseControllerRotationPitch = false;
@@ -642,22 +646,11 @@ bool ATPPlayer::VaultForwardHeightTrace()
 	FHitResult hitResult;
 
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * (WallClimbHeightForwardCheck + VaultThicknessDistance);
-	const FVector endLocation = startLocation - WallClimbUpDownOffset;
+	const FVector endLocation = startLocation - VaultDownOffset;
 
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		bool hasTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
-		if (!hasTag)
-		{
-			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
-		}
-
-		if (!hasTag)
-		{
-			return false;
-		}
-
 		_forwardHeightTrace = hitResult;
 		return true;
 	}
@@ -724,6 +717,12 @@ bool ATPPlayer::HandleVault()
 	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
 	const float difference = socketLocation.Z - hitLocation.Z;
 
+	VaultDownDistance = _forwardHeightTrace.Location.Z - hitLocation.Z;
+	if (VaultDownDistance < 0)
+	{
+		VaultDownDistance += GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + VaultDownZDiffOffset;
+	}
+
 	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Vault Height: " + FString::SanitizeFloat(difference));
 
 	if (!_isClimbing && difference >= VaultWallMinHeight && difference <= VaultWallHeight)
@@ -754,10 +753,6 @@ bool ATPPlayer::HandleVault()
 
 		_isClimbing = true;
 		PlayerVaultNotify(targetRotation, delta);
-
-		// #if WITH_EDITOR
-		// 		GUnrealEd->PlayWorld->bDebugPauseExecution = true;
-		// #endif
 
 		return true;
 	}
