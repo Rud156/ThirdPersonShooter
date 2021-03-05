@@ -68,12 +68,17 @@ private:
 	FHitResult _forwardTrace;
 	FHitResult _heightTrace;
 	FHitResult _forwardHeightTrace;
-	bool WallClimbForwardTrace();
-	bool WallClimbHeightTrace();
+	void WallClimbForwardTrace(bool& CanClimb, bool& CanVault);
+	void WallClimbHeightTrace(bool& CanClimb, bool& CanVault);
 	bool VaultForwardHeightTrace();
 	bool HandleWallClimb();
 	bool HandleVault();
 	void UpdateWallClimbCheck(const float DeltaTime);
+
+	bool _updateVaultForward;
+	FVector2D _vaultEndOffset; // X: Target, Y: Current
+	float _vaultLerpAmount;
+	void UpdateVaultForward(const float DeltaTime);
 
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
@@ -185,22 +190,31 @@ public:
 	FVector WallClimbUpDownOffset;
 
 	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
-	FVector VaultDownOffset;
-
-	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
-	float VaultDownZDiffOffset;
-
-	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float ClimbAnimXOffset;
 
 	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float ClimbAnimZOffset;
 
 	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	FVector VaultDownOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float VaultAnimXOffset;
 
 	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
 	float VaultAnimZOffset;
+
+	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
+	float VaultMoveDownMaxOffset;
+
+	UPROPERTY(Category = "Player|NM_WallClimb", EditAnywhere)
+	float VaultDownZDiffOffset;
+
+	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
+	float VaultLerpSpeed;
+
+	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
+	bool UseDebugBreak;
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float WallClimbHeight;
@@ -217,11 +231,11 @@ public:
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float VaultThicknessDistance;
 
-	UPROPERTY(Category = "Player|WallClimb", BlueprintReadOnly)
-	float VaultDownDistance;
-
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	FName WallClimbableTag;
+
+	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
+	FName VaultTag;
 
 #pragma endregion
 
@@ -246,6 +260,9 @@ public:
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 	void HandleClimbAnimComplete();
+
+	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
+	void HandleVaultAnimMoveForwardComplete();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintCallable)
 	void HandleVaultAnimComplete();

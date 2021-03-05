@@ -65,6 +65,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
 	UpdateRunMeshRotation(DeltaTime);
+	UpdateVaultForward(DeltaTime);
 }
 
 void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -584,7 +585,7 @@ void ATPPlayer::ApplyChangesToCharacter()
 	}
 }
 
-bool ATPPlayer::WallClimbForwardTrace()
+void ATPPlayer::WallClimbForwardTrace(bool& CanClimb, bool& CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FHitResult hitResult;
@@ -595,23 +596,25 @@ bool ATPPlayer::WallClimbForwardTrace()
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		bool hasTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
-		if (!hasTag)
+		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
+		if (!hasClimbTag)
 		{
-			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
+			hasClimbTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
 		}
 
-		if (hasTag)
+		bool hasVaultTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(VaultTag);
+		if (!hasVaultTag)
 		{
-			_forwardTrace = hitResult;
-			return true;
+			hasVaultTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(VaultTag);
 		}
+
+		CanClimb = hasClimbTag;
+		CanVault = hasVaultTag;
+		_forwardTrace = hitResult;
 	}
-
-	return false;
 }
 
-bool ATPPlayer::WallClimbHeightTrace()
+void ATPPlayer::WallClimbHeightTrace(bool& CanClimb, bool& CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FHitResult hitResult;
@@ -622,22 +625,22 @@ bool ATPPlayer::WallClimbHeightTrace()
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		bool hasTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
-		if (!hasTag)
+		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
+		if (!hasClimbTag)
 		{
-			hasTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
+			hasClimbTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(WallClimbableTag);
 		}
 
-		if (!hasTag)
+		bool hasVaultTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(VaultTag);
+		if (!hasVaultTag)
 		{
-			return false;
+			hasVaultTag = hitResult.GetActor() != nullptr && hitResult.GetActor()->ActorHasTag(VaultTag);
 		}
 
+		CanClimb = hasClimbTag;
+		CanVault = hasVaultTag;
 		_heightTrace = hitResult;
-		return true;
 	}
-
-	return false;
 }
 
 bool ATPPlayer::VaultForwardHeightTrace()
@@ -717,12 +720,6 @@ bool ATPPlayer::HandleVault()
 	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
 	const float difference = socketLocation.Z - hitLocation.Z;
 
-	VaultDownDistance = _forwardHeightTrace.Location.Z - hitLocation.Z;
-	if (VaultDownDistance < 0)
-	{
-		VaultDownDistance += GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + VaultDownZDiffOffset;
-	}
-
 	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Vault Height: " + FString::SanitizeFloat(difference));
 
 	if (!_isClimbing && difference >= VaultWallMinHeight && difference <= VaultWallHeight)
@@ -754,6 +751,13 @@ bool ATPPlayer::HandleVault()
 		_isClimbing = true;
 		PlayerVaultNotify(targetRotation, delta);
 
+		if (UseDebugBreak)
+		{
+#if WITH_EDITOR
+			GUnrealEd->PlayWorld->bDebugPauseExecution = true;
+#endif
+		}
+
 		return true;
 	}
 
@@ -764,19 +768,23 @@ void ATPPlayer::UpdateWallClimbCheck(const float DeltaTime)
 {
 	if (_verticalInput == 1 && _isJumpPressed && !_isClimbing)
 	{
-		const bool forwardTrace = WallClimbForwardTrace();
-		const bool heightTrace = WallClimbHeightTrace();
+		bool forwardClimb, forwardVault;
+		WallClimbForwardTrace(forwardClimb, forwardVault);
+
+		bool heightClimb, heightVault;
+		WallClimbHeightTrace(heightClimb, heightVault);
+
 		const bool forwardHeightTrace = VaultForwardHeightTrace();
 
-		if (forwardTrace && heightTrace && forwardHeightTrace)
+		if (forwardVault && heightVault && forwardHeightTrace)
 		{
 			const bool vaulted = HandleVault();
-			if (!vaulted)
+			if (!vaulted && forwardClimb && heightClimb)
 			{
 				HandleWallClimb();
 			}
 		}
-		else if (forwardTrace && heightTrace)
+		else if (forwardClimb && heightClimb)
 		{
 			HandleWallClimb();
 		}
@@ -793,13 +801,63 @@ void ATPPlayer::HandleClimbAnimComplete()
 	}
 }
 
+void ATPPlayer::HandleVaultAnimMoveForwardComplete()
+{
+	const FVector forwardVector = GetActorForwardVector();
+	const FRotator rotation = UKismetMathLibrary::MakeRotFromX(forwardVector);
+	SetActorRotation(FRotator(0, rotation.Yaw, 0));
+
+	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
+	_updateVaultForward = true;
+
+	float vaultDownDistance = _forwardHeightTrace.Location.Z - _heightTrace.Location.Z;
+	if (vaultDownDistance < -VaultMoveDownMaxOffset)
+	{
+		vaultDownDistance += GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + VaultDownZDiffOffset;
+		_vaultEndOffset = FVector2D(GetActorLocation().Z + vaultDownDistance, GetActorLocation().Z);
+	}
+	else
+	{
+		vaultDownDistance = _forwardHeightTrace.Location.Z + GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+		_vaultEndOffset = FVector2D(vaultDownDistance, GetActorLocation().Z);
+	}
+	_vaultLerpAmount = 0;
+}
+
 void ATPPlayer::HandleVaultAnimComplete()
 {
 	_isClimbing = false;
+	_updateVaultForward = false;
 
 	if (_isRunningBeforeTrace)
 	{
 		HandleSprintPressed();
+	}
+
+	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
+}
+
+void ATPPlayer::UpdateVaultForward(const float DeltaTime)
+{
+	if (!_isClimbing || !_updateVaultForward)
+	{
+		return;
+	}
+
+	const FVector direction = GetActorForwardVector() * _verticalInput + GetActorRightVector() * _horizontalInput;
+	AddMovementInput(direction, 1);
+
+	const FVector location = GetActorLocation();
+
+	if (_vaultLerpAmount <= 1)
+	{
+		const float mappedZLocation = FMath::Lerp(_vaultEndOffset.Y, _vaultEndOffset.X, _vaultLerpAmount);
+		_vaultLerpAmount += VaultLerpSpeed * DeltaTime;
+		SetActorLocation(FVector(location.X, location.Y, mappedZLocation));
+	}
+	else if (_vaultLerpAmount > 1)
+	{
+		SetActorLocation(FVector(location.X, location.Y, _vaultEndOffset.X));
 	}
 }
 
