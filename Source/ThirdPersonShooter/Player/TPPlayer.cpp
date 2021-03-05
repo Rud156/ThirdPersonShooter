@@ -60,12 +60,13 @@ void ATPPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateCapsuleSize(DeltaTime);
-	UpdateWallClimbCheck(DeltaTime);
 	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
 	UpdateDive(DeltaTime);
 	UpdateRunMeshRotation(DeltaTime);
 	UpdateVaultForward(DeltaTime);
+
+	CheckAndActivateWallClimb();
 }
 
 void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -140,6 +141,11 @@ void ATPPlayer::LookUpRate(const float Value)
 
 void ATPPlayer::TurnAtRate(const float Value)
 {
+	if (_isClimbing)
+	{
+		return;
+	}
+
 	AddControllerYawInput(Value * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
@@ -151,6 +157,12 @@ void ATPPlayer::HandleJumpPressed()
 	}
 
 	_isJumpPressed = true;
+	const bool success = CheckAndActivateWallClimb();
+
+	if (success)
+	{
+		return;
+	}
 
 	if (GetTopPlayerState() == EPlayerMovementState::Crouch)
 	{
@@ -706,19 +718,11 @@ bool ATPPlayer::HandleWallClimb()
 
 	if (!_isClimbing && difference >= -WallClimbHeight && difference <= -WallClimbMinHeight)
 	{
+		_preVJMovementState = GetTopPlayerState();
 		ResetPreRunRotation();
 		if (_isInAds)
 		{
 			HandleADSPressed();
-		}
-
-		if (HasPlayerState(EPlayerMovementState::Run))
-		{
-			_isRunningBeforeTrace = true;
-		}
-		else
-		{
-			_isRunningBeforeTrace = false;
 		}
 
 		GetCharacterMovement()->StopMovementImmediately();
@@ -754,19 +758,11 @@ bool ATPPlayer::HandleVault()
 
 	if (!_isClimbing && difference >= VaultWallMinHeight && difference <= VaultWallHeight)
 	{
+		_preVJMovementState = GetTopPlayerState();
 		ResetPreRunRotation();
 		if (_isInAds)
 		{
 			HandleADSPressed();
-		}
-
-		if (HasPlayerState(EPlayerMovementState::Run))
-		{
-			_isRunningBeforeTrace = true;
-		}
-		else
-		{
-			_isRunningBeforeTrace = false;
 		}
 
 		GetCharacterMovement()->StopMovementImmediately();
@@ -781,22 +777,15 @@ bool ATPPlayer::HandleVault()
 		_isClimbing = true;
 		PlayerVaultNotify(targetRotation, delta);
 
-		if (UseDebugBreak)
-		{
-#if WITH_EDITOR
-			GUnrealEd->PlayWorld->bDebugPauseExecution = true;
-#endif
-		}
-
 		return true;
 	}
 
 	return false;
 }
 
-void ATPPlayer::UpdateWallClimbCheck(const float DeltaTime)
+bool ATPPlayer::CheckAndActivateWallClimb()
 {
-	if (_verticalInput == 1 && _isJumpPressed && !_isClimbing)
+	if (_verticalInput == 1 && _isJumpPressed && !_isClimbing && CanAcceptPlayerInput())
 	{
 		bool forwardClimb = false;
 		bool forwardVault = false;
@@ -813,23 +802,31 @@ void ATPPlayer::UpdateWallClimbCheck(const float DeltaTime)
 			const bool vaulted = HandleVault();
 			if (!vaulted && forwardClimb && heightClimb)
 			{
-				HandleWallClimb();
+				return HandleWallClimb();
 			}
+
+			return vaulted;
 		}
 		else if (forwardClimb && heightClimb)
 		{
-			HandleWallClimb();
+			return HandleWallClimb();
 		}
 	}
+
+	return false;
 }
 
 void ATPPlayer::HandleClimbAnimComplete()
 {
 	_isClimbing = false;
 
-	if (_isRunningBeforeTrace)
+	if (_preVJMovementState == EPlayerMovementState::Run)
 	{
 		HandleSprintPressed();
+	}
+	else if (_preVJMovementState == EPlayerMovementState::Crouch)
+	{
+		HandleCrouchPressed();
 	}
 }
 
@@ -860,13 +857,16 @@ void ATPPlayer::HandleVaultAnimComplete()
 {
 	_isClimbing = false;
 	_updateVaultForward = false;
+	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
 
-	if (_isRunningBeforeTrace)
+	if (_preVJMovementState == EPlayerMovementState::Run)
 	{
 		HandleSprintPressed();
 	}
-
-	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
+	else if (_preVJMovementState == EPlayerMovementState::Crouch)
+	{
+		HandleCrouchPressed();
+	}
 }
 
 void ATPPlayer::UpdateVaultForward(const float DeltaTime)

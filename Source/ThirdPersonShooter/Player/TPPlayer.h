@@ -62,7 +62,7 @@ private:
 	void UpdateRunMeshRotation(const float DeltaTime);
 	void ResetPreRunRotation(const bool ForceReset = false);
 
-	bool _isRunningBeforeTrace;
+	EPlayerMovementState _preVJMovementState;
 	bool _isJumpPressed;
 	bool _isClimbing;
 	FHitResult _forwardTrace;
@@ -73,7 +73,7 @@ private:
 	bool VaultForwardHeightTrace();
 	bool HandleWallClimb();
 	bool HandleVault();
-	void UpdateWallClimbCheck(const float DeltaTime);
+	bool CheckAndActivateWallClimb();
 
 	bool _updateVaultForward;
 	FVector2D _vaultEndOffset; // X: Target, Y: Current
