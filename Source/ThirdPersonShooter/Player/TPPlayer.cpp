@@ -593,9 +593,19 @@ void ATPPlayer::WallClimbForwardTrace(bool& CanClimb, bool& CanVault)
 	const FVector startLocation = GetActorLocation();
 	const FVector endLocation = GetActorForwardVector() * WallClimbForwardCheck + startLocation;
 
+	if (UseDrawDebug)
+	{
+		DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
+	}
+
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
+		if (UseDrawDebug)
+		{
+			DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
+		}
+
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
 		if (!hasClimbTag)
 		{
@@ -622,9 +632,19 @@ void ATPPlayer::WallClimbHeightTrace(bool& CanClimb, bool& CanVault)
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * WallClimbHeightForwardCheck;
 	const FVector endLocation = startLocation - WallClimbUpDownOffset;
 
+	if (UseDrawDebug)
+	{
+		DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
+	}
+
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
+		if (UseDrawDebug)
+		{
+			DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
+		}
+
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
 		if (!hasClimbTag)
 		{
@@ -651,9 +671,19 @@ bool ATPPlayer::VaultForwardHeightTrace()
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * (WallClimbHeightForwardCheck + VaultThicknessDistance);
 	const FVector endLocation = startLocation - VaultDownOffset;
 
+	if (UseDrawDebug)
+	{
+		DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
+	}
+
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
+		if (UseDrawDebug)
+		{
+			DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
+		}
+
 		_forwardHeightTrace = hitResult;
 		return true;
 	}
@@ -768,10 +798,12 @@ void ATPPlayer::UpdateWallClimbCheck(const float DeltaTime)
 {
 	if (_verticalInput == 1 && _isJumpPressed && !_isClimbing)
 	{
-		bool forwardClimb, forwardVault;
+		bool forwardClimb = false;
+		bool forwardVault = false;
 		WallClimbForwardTrace(forwardClimb, forwardVault);
 
-		bool heightClimb, heightVault;
+		bool heightClimb = false;
+		bool heightVault = false;
 		WallClimbHeightTrace(heightClimb, heightVault);
 
 		const bool forwardHeightTrace = VaultForwardHeightTrace();

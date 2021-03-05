@@ -216,6 +216,9 @@ public:
 	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
 	bool UseDebugBreak;
 
+	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
+	bool UseDrawDebug;
+
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float WallClimbHeight;
 
