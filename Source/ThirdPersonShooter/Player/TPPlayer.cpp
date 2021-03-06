@@ -797,7 +797,7 @@ bool ATPPlayer::CheckAndActivateWallClimb()
 
 		const bool forwardHeightTrace = VaultForwardHeightTrace();
 
-		if (forwardVault && heightVault && forwardHeightTrace)
+		if (forwardVault && heightVault && forwardHeightTrace && !_lastFrameFalling)
 		{
 			const bool vaulted = HandleVault();
 			if (!vaulted && forwardClimb && heightClimb)
