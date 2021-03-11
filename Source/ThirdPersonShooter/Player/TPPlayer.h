@@ -88,7 +88,9 @@ private:
 	float _vaultLerpAmount;
 	void UpdateVaultForward(const float DeltaTime);
 
+	bool _firePressed;
 	ABaseShootingWeapon* _currentWeapon;
+	void UpdateFirePressed(const float DeltaTime);
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
 
 	void MoveForward(const float Value);
@@ -103,6 +105,8 @@ private:
 	void HandleDivePressed();
 	void HandleADSPressed();
 	void HandleInteractPressed();
+	void HandleFirePressed();
+	void HandleFireReleased();
 	bool CanAcceptPlayerInput() const;
 
 protected:

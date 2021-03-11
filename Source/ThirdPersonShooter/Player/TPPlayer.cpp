@@ -78,6 +78,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateDive(DeltaTime);
 	UpdateRunMeshRotation(DeltaTime);
 	UpdateVaultForward(DeltaTime);
+	UpdateFirePressed(DeltaTime);
 
 	CheckAndActivateWallClimb();
 }
@@ -95,6 +96,8 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
 	PlayerInputComponent->BindAction("ADS", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleADSPressed);
 	PlayerInputComponent->BindAction("Interact", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleInteractPressed);
+	PlayerInputComponent->BindAction("Fire", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleFirePressed);
+	PlayerInputComponent->BindAction("Fire", EInputEvent::IE_Released, this, &ATPPlayer::HandleFireReleased);
 
 	PlayerInputComponent->BindAxis("Turn", this, &ATPPlayer::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &ATPPlayer::LookUpRate);
@@ -528,14 +531,10 @@ void ATPPlayer::HandleInteractPressed()
 	FVector startLocation = InteractCastPoint->GetComponentLocation();
 	FVector endLocation = startLocation + FollowCamera->GetForwardVector() * InteractionDistance;
 
-	DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
-
 	FHitResult hitResult;
 	bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, startLocation, endLocation, ECollisionChannel::ECC_Visibility, collisionParams);
 	if (hit && hitResult.GetActor() != nullptr)
 	{
-		DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
-
 		auto actor = hitResult.GetActor();
 		auto actorComponent = actor->GetComponentByClass(UInteractionComponent::StaticClass());
 		auto interactionComponent = Cast<UInteractionComponent>(actorComponent);
@@ -930,6 +929,32 @@ void ATPPlayer::UpdateVaultForward(const float DeltaTime)
 	else if (_vaultLerpAmount > 1)
 	{
 		SetActorLocation(FVector(location.X, location.Y, _vaultEndOffset.X));
+	}
+}
+
+void ATPPlayer::HandleFirePressed()
+{
+	_firePressed = true;
+}
+
+void ATPPlayer::HandleFireReleased()
+{
+	_firePressed = false;
+}
+
+
+void ATPPlayer::UpdateFirePressed(const float DeltaTime)
+{
+	if (!CanAcceptPlayerInput() || _currentWeapon == nullptr)
+	{
+		return;
+	}
+
+	if (_currentWeapon->CanShoot() && _firePressed)
+	{
+		const FVector2D recoilOffset = _currentWeapon->ShootWithRecoil();
+		AddControllerPitchInput(recoilOffset.Y);
+		AddControllerYawInput(recoilOffset.X);
 	}
 }
 

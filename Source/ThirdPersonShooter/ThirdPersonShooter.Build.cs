@@ -8,19 +8,21 @@ public class ThirdPersonShooter : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PublicDependencyModuleNames.AddRange(new string[] {
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
             "Core",
-                "CoreUObject",
-                "Engine",
-                "InputCore",
-                "HeadMountedDisplay",
-                "UMG",
-                "Slate",
-                "SlateCore",
-                "AIModule",
-                "GameplayTasks",
-                "NavigationSystem",
-                "UnrealEd"
+            "CoreUObject",
+            "Engine",
+            "InputCore",
+            "HeadMountedDisplay",
+            "UMG",
+            "Slate",
+            "SlateCore",
+            "AIModule",
+            "GameplayTasks",
+            "NavigationSystem",
+            "UnrealEd",
+            "TextAsset"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });
