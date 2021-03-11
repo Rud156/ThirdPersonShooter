@@ -7,6 +7,8 @@
 #include "../Utils/Enums.h"
 #include "TPPlayer.generated.h"
 
+class ABaseShootingWeapon;
+
 UCLASS()
 class THIRDPERSONSHOOTER_API ATPPlayer : public ACharacter
 {
@@ -21,6 +23,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* WeaponAttachPoint;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	class USceneComponent* InteractCastPoint;
 
 	float _horizontalInput;
 	float _verticalInput;
@@ -83,6 +88,9 @@ private:
 	float _vaultLerpAmount;
 	void UpdateVaultForward(const float DeltaTime);
 
+	ABaseShootingWeapon* _currentWeapon;
+	void PickupWeapon(ABaseShootingWeapon* Weapon);
+
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
 	void TurnAtRate(const float Value);
@@ -94,6 +102,7 @@ private:
 	void HandleShoulderSwapPressed();
 	void HandleDivePressed();
 	void HandleADSPressed();
+	void HandleInteractPressed();
 	bool CanAcceptPlayerInput() const;
 
 protected:
@@ -216,12 +225,6 @@ public:
 	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
 	float VaultLerpSpeed;
 
-	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
-	bool UseDebugBreak;
-
-	UPROPERTY(Category="Player|NM_WallClimb", EditAnywhere)
-	bool UseDrawDebug;
-
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	float WallClimbHeight;
 
@@ -242,6 +245,27 @@ public:
 
 	UPROPERTY(Category = "Player|WallClimb", EditAnywhere)
 	FName VaultTag;
+
+	UPROPERTY(Category = "Player|Attachment", EditAnywhere)
+	FName LeftHandSocket;
+
+	UPROPERTY(Category = "Player|Attachment", EditAnywhere)
+	FVector LeftAttachmentLocation;
+
+	UPROPERTY(Category = "Player|Attachment", EditAnywhere)
+	FRotator LeftAttachmentRotation;
+
+	UPROPERTY(Category = "Player|Attachment", EditAnywhere)
+	FName RightHandSocket;
+
+	UPROPERTY(Category = "Player|Attachment", EditAnywhere)
+	FVector RightAttachmentLocation;
+
+	UPROPERTY(Category = "Player|Attachment", EditAnywhere)
+	FRotator RightAttachmentRotation;
+
+	UPROPERTY(Category = "Player|Interaction", EditAnywhere)
+	float InteractionDistance;
 
 #pragma endregion
 

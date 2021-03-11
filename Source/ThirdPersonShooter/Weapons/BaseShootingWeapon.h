@@ -13,9 +13,6 @@ class THIRDPERSONSHOOTER_API ABaseShootingWeapon : public AActor
 
 private:
 	UPROPERTY(Category="Mesh", VisibleDefaultsOnly)
-	class USceneComponent* WeaponRoot;
-
-	UPROPERTY(Category="Mesh", VisibleDefaultsOnly)
 	class USkeletalMeshComponent* WeaponMesh;
 
 	UPROPERTY(Category="Collider", VisibleDefaultsOnly)
@@ -28,6 +25,8 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	void PickupWeapon() const;
+	void DropWeapon() const;
+
 	ABaseShootingWeapon();
-	virtual void Tick(float DeltaTime) override;
 };

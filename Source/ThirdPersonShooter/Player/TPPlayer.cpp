@@ -2,6 +2,8 @@
 
 
 #include "./TPPlayer.h"
+#include "../CustomCompoenents/Misc/InteractionComponent.h"
+#include "../Weapons/BaseShootingWeapon.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -41,6 +43,9 @@ ATPPlayer::ATPPlayer()
 	WeaponAttachPoint = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponAttachPoint"));
 	WeaponAttachPoint->SetupAttachment(GetMesh());
 
+	InteractCastPoint = CreateDefaultSubobject<USceneComponent>(TEXT("InteractCastPoint"));
+	InteractCastPoint->SetupAttachment(FollowCamera);
+
 	PrimaryActorTick.bCanEverTick = true;
 }
 
@@ -57,6 +62,10 @@ void ATPPlayer::BeginPlay()
 	_cameraBoomLength = FVector2D(CameraDefaultBoomLength, CameraDefaultBoomLength);
 	_shoulderCameraLerpAmount = 0;
 	_runLerpAmount = 1;
+
+	WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
+	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
+	WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
 }
 
 void ATPPlayer::Tick(float DeltaTime)
@@ -85,6 +94,7 @@ void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
 	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
 	PlayerInputComponent->BindAction("ADS", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleADSPressed);
+	PlayerInputComponent->BindAction("Interact", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleInteractPressed);
 
 	PlayerInputComponent->BindAxis("Turn", this, &ATPPlayer::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &ATPPlayer::LookUpRate);
@@ -313,6 +323,31 @@ void ATPPlayer::HandleShoulderSwapPressed()
 {
 	_isLeftShoulder = !_isLeftShoulder;
 
+	if (_isLeftShoulder)
+	{
+		const FDetachmentTransformRules detachmentRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            true);
+		WeaponAttachPoint->DetachFromComponent(detachmentRules);
+
+		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), LeftHandSocket);
+		WeaponAttachPoint->SetRelativeLocation(LeftAttachmentLocation);
+		WeaponAttachPoint->SetRelativeRotation(LeftAttachmentRotation);
+	}
+	else
+	{
+		const FDetachmentTransformRules detachmentRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            true);
+		WeaponAttachPoint->DetachFromComponent(detachmentRules);
+
+		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
+		WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
+		WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
+	}
+
 	ShoulderSwapNotify();
 }
 
@@ -485,6 +520,37 @@ bool ATPPlayer::CanAcceptADSInput() const
 	return true;
 }
 
+void ATPPlayer::HandleInteractPressed()
+{
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(this);
+
+	FVector startLocation = InteractCastPoint->GetComponentLocation();
+	FVector endLocation = startLocation + FollowCamera->GetForwardVector() * InteractionDistance;
+
+	DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
+
+	FHitResult hitResult;
+	bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, startLocation, endLocation, ECollisionChannel::ECC_Visibility, collisionParams);
+	if (hit && hitResult.GetActor() != nullptr)
+	{
+		DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
+
+		auto actor = hitResult.GetActor();
+		auto actorComponent = actor->GetComponentByClass(UInteractionComponent::StaticClass());
+		auto interactionComponent = Cast<UInteractionComponent>(actorComponent);
+
+		if (interactionComponent != nullptr && interactionComponent->CanInteract())
+		{
+			ABaseShootingWeapon* weapon = Cast<ABaseShootingWeapon>(actor);
+			if (weapon != nullptr)
+			{
+				PickupWeapon(weapon);
+			}
+		}
+	}
+}
+
 bool ATPPlayer::CanAcceptPlayerInput() const
 {
 	if (GetTopPlayerState() == EPlayerMovementState::Dive || _isClimbing)
@@ -609,19 +675,9 @@ void ATPPlayer::WallClimbForwardTrace(bool& CanClimb, bool& CanVault)
 	const FVector startLocation = GetActorLocation();
 	const FVector endLocation = GetActorForwardVector() * WallClimbForwardCheck + startLocation;
 
-	if (UseDrawDebug)
-	{
-		DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
-	}
-
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		if (UseDrawDebug)
-		{
-			DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
-		}
-
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
 		if (!hasClimbTag)
 		{
@@ -648,19 +704,9 @@ void ATPPlayer::WallClimbHeightTrace(bool& CanClimb, bool& CanVault)
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * WallClimbHeightForwardCheck;
 	const FVector endLocation = startLocation - WallClimbUpDownOffset;
 
-	if (UseDrawDebug)
-	{
-		DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
-	}
-
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		if (UseDrawDebug)
-		{
-			DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
-		}
-
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
 		if (!hasClimbTag)
 		{
@@ -687,19 +733,9 @@ bool ATPPlayer::VaultForwardHeightTrace()
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * (WallClimbHeightForwardCheck + VaultThicknessDistance);
 	const FVector endLocation = startLocation - VaultDownOffset;
 
-	if (UseDrawDebug)
-	{
-		DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 10);
-	}
-
 	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
 	if (didCollide)
 	{
-		if (UseDrawDebug)
-		{
-			DrawDebugSphere(GetWorld(), hitResult.Location, 10, 16, FColor::Red, false, 10);
-		}
-
 		_forwardHeightTrace = hitResult;
 		return true;
 	}
@@ -895,6 +931,19 @@ void ATPPlayer::UpdateVaultForward(const float DeltaTime)
 	{
 		SetActorLocation(FVector(location.X, location.Y, _vaultEndOffset.X));
 	}
+}
+
+void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
+{
+	const FAttachmentTransformRules attachmentRules = FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
+	                                                                            EAttachmentRule::SnapToTarget,
+	                                                                            EAttachmentRule::KeepWorld,
+	                                                                            true);
+
+	Weapon->PickupWeapon();
+	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
+
+	_currentWeapon = Weapon;
 }
 
 float ATPPlayer::GetVerticalInput() const

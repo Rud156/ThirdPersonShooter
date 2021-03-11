@@ -9,16 +9,14 @@
 
 ABaseShootingWeapon::ABaseShootingWeapon()
 {
-	WeaponRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponRoot"));
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollider"));
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionCompoenent"));
 
-	RootComponent = WeaponRoot;
+	RootComponent = WeaponCollider;
 	WeaponMesh->SetupAttachment(RootComponent);
-	WeaponCollider->SetupAttachment(RootComponent);
 
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 void ABaseShootingWeapon::BeginPlay()
@@ -26,7 +24,14 @@ void ABaseShootingWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ABaseShootingWeapon::Tick(float DeltaTime)
+void ABaseShootingWeapon::PickupWeapon() const
 {
-	Super::Tick(DeltaTime);
+	WeaponCollider->SetCollisionProfileName("NoCollision");
+	WeaponCollider->SetSimulatePhysics(false);
+}
+
+void ABaseShootingWeapon::DropWeapon() const
+{
+	WeaponCollider->SetCollisionProfileName("BlockAllDynamic");
+	WeaponCollider->SetSimulatePhysics(true);
 }
