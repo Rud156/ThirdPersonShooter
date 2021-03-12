@@ -4,17 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TextAsset/Public/TextAsset.h"
 #include "../Utils/Structs.h"
 #include "BaseShootingWeapon.generated.h"
-
-struct FSortRecoil
-{
-	bool operator()(const FRecoilOffset A, const FRecoilOffset B) const
-	{
-		return A.Index < B.Index;
-	}
-};
 
 UCLASS()
 class THIRDPERSONSHOOTER_API ABaseShootingWeapon : public AActor
@@ -31,13 +22,13 @@ private:
 	UPROPERTY(Category="Interaction", VisibleDefaultsOnly)
 	class UInteractionComponent* InteractionComponent;
 
+	int _bulletsShot;
+
+	int _randomLRBulletCounter;
+	bool _recoilLeft;
+
 	float _currentRecoilResetTime;
-	int _currentRecoilIndex;
-
 	float _lastShotTime;
-
-	TArray<FRecoilOffset> _recoilOffset;
-	void LoadRecoilData(const FText InputRecoilData);
 
 protected:
 	virtual void BeginPlay() override;
@@ -48,22 +39,49 @@ public:
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	float FireRate;
 
-	UPROPERTY(Category="Weapon|Recoil", BlueprintReadOnly, EditAnywhere)
-	UTextAsset* RecoilData;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	float RecoilOffsetMultiplier;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	int MidRecoilIndex;
-
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	float RecoilResetTime;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	FVector2D DefaultFiringError;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	FVector2D MovementFiringError;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	int VerticalRecoilStartBullet;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	float VerticalOffsetAmount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	int HorizontalRecoilStartBullet;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	int HorizontalMinLeftBulletCount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	int HorizontalMaxLeftBulletCount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	int HorizontalMinRightBulletCount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	int HorizontalMaxRightBulletCount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	float HorizontalOffsetAmount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CameraOffsetMultiplierX;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CameraOffsetMultiplierY;
 
 #pragma endregion
 
 	bool CanShoot() const;
-	FVector2D ShootWithRecoil();
+	FRecoilOffset ShootWithRecoil(const bool IsMoving);
 
 	void PickupWeapon() const;
 	void DropWeapon() const;

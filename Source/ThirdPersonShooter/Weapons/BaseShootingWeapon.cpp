@@ -25,7 +25,6 @@ ABaseShootingWeapon::ABaseShootingWeapon()
 void ABaseShootingWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	LoadRecoilData(RecoilData->Text);
 }
 
 void ABaseShootingWeapon::Tick(float DeltaSeconds)
@@ -38,67 +37,8 @@ void ABaseShootingWeapon::Tick(float DeltaSeconds)
 
 		if (_currentRecoilResetTime <= 0)
 		{
-			_currentRecoilIndex = 0;
+			_bulletsShot = 0;
 		}
-	}
-}
-
-void ABaseShootingWeapon::LoadRecoilData(const FText InputRecoilData)
-{
-	_recoilOffset = TArray<FRecoilOffset>();
-
-	int rowIndex = 0;
-	int columnIndex = 0;
-	FString numberString = "";
-
-	const FString recoilString = InputRecoilData.ToString();
-
-	for (int i = 0; i < recoilString.Len(); i++)
-	{
-		const auto letter = recoilString[i];
-
-		if (letter == '\r')
-		{
-			rowIndex += 1;
-			columnIndex = 0;
-			i += 1;
-		}
-		else if (letter == '\n')
-		{
-			rowIndex += 1;
-			columnIndex = 0;
-		}
-		else if (letter == ',')
-		{
-			int outValue = 0;
-			const bool parseSuccess = FDefaultValueHelper::ParseInt(numberString, outValue);
-
-			if (parseSuccess)
-			{
-				FRecoilOffset recoilOffset = {outValue, rowIndex, columnIndex, FVector2D::ZeroVector};
-				_recoilOffset.Add(recoilOffset);
-			}
-
-			numberString = "";
-			columnIndex += 1;
-		}
-		else
-		{
-			numberString += letter;
-		}
-	}
-
-	_recoilOffset.Sort(FSortRecoil());
-	for (int i = 1; i < _recoilOffset.Num(); i++)
-	{
-		const FRecoilOffset lastIndexData = _recoilOffset[i - 1];
-		const FRecoilOffset currentIndexData = _recoilOffset[i];
-
-		const int rowDiff = lastIndexData.RowIndex - currentIndexData.RowIndex;
-		const int columnDiff = lastIndexData.ColumnIndex - currentIndexData.ColumnIndex;
-
-		const FVector2D offset = FVector2D(rowDiff * RecoilOffsetMultiplier, columnDiff * RecoilOffsetMultiplier);
-		_recoilOffset[i].Offset = offset;
 	}
 }
 
@@ -115,24 +55,62 @@ bool ABaseShootingWeapon::CanShoot() const
 	return false;
 }
 
-FVector2D ABaseShootingWeapon::ShootWithRecoil()
+FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 {
 	if (!CanShoot())
 	{
-		return FVector2D::ZeroVector;
+		return {FVector2D::ZeroVector, FVector2D::ZeroVector};
 	}
 
-	const FRecoilOffset recoilOffset = _recoilOffset[_currentRecoilIndex];
+	// Default Firing Error
 
-	_currentRecoilIndex += 1;
-	if (_currentRecoilIndex >= _recoilOffset.Num())
+	const FVector2D firingError = IsMoving ? MovementFiringError : DefaultFiringError;
+	const FVector randomPointInSphere = FMath::VRand();
+	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
+	                                     randomPointInSphere.Z * FMath::RandRange(-firingError.Y, firingError.Y));
+
+	if (_bulletsShot >= VerticalRecoilStartBullet) // Check And Apply Vertical Recoil
 	{
-		_currentRecoilIndex = MidRecoilIndex;
+		shootingOffset.Y += VerticalOffsetAmount;
 	}
+
+	if (_bulletsShot >= HorizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
+	{
+		if (_randomLRBulletCounter == 0)
+		{
+			if (_recoilLeft)
+			{
+				_randomLRBulletCounter = FMath::RandRange(HorizontalMinLeftBulletCount, HorizontalMaxLeftBulletCount);
+			}
+			else
+			{
+				_randomLRBulletCounter = FMath::RandRange(HorizontalMinRightBulletCount, HorizontalMaxRightBulletCount);
+			}
+		}
+
+		if (_recoilLeft)
+		{
+			shootingOffset.X += HorizontalOffsetAmount;
+		}
+		else
+		{
+			shootingOffset.X -= HorizontalOffsetAmount;
+		}
+
+		_randomLRBulletCounter -= 1;
+		if (_randomLRBulletCounter <= 0)
+		{
+			_recoilLeft = !_recoilLeft;
+		}
+	}
+
+	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Bullets Shot: " + FString::SanitizeFloat(_bulletsShot));
+
+	_bulletsShot += 1;
+	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
-	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-	return recoilOffset.Offset;
+	return {FVector2D::ZeroVector, shootingOffset};
 }
 
 void ABaseShootingWeapon::PickupWeapon() const

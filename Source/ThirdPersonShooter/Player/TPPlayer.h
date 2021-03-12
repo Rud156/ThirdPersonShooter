@@ -34,6 +34,7 @@ private:
 	void PushPlayerMovementState(const EPlayerMovementState MovementState);
 	void RemovePlayerMovementState(const EPlayerMovementState MovementState);
 	bool HasPlayerState(const EPlayerMovementState MovementState);
+	bool IsMoving() const;
 	void ApplyChangesToCharacter();
 
 	FVector2D _capsuleRadius; // X: Target, Y: Current
@@ -92,6 +93,7 @@ private:
 	ABaseShootingWeapon* _currentWeapon;
 	void UpdateFirePressed(const float DeltaTime);
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
+	bool CanAcceptShootingInput() const;
 
 	void MoveForward(const float Value);
 	void MoveRight(const float Value);
@@ -270,6 +272,9 @@ public:
 
 	UPROPERTY(Category = "Player|Interaction", EditAnywhere)
 	float InteractionDistance;
+
+	UPROPERTY(Category="Player|Weapon", EditAnywhere)
+	float MaxShootDistance;
 
 #pragma endregion
 

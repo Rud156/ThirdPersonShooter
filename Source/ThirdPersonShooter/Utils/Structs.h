@@ -10,8 +10,6 @@ struct FRecoilOffset
 {
 	GENERATED_BODY()
 
-	int Index;
-	int RowIndex;
-	int ColumnIndex;
-	FVector2D Offset;
+	FVector2D CameraOffset;
+	FVector2D RecoilOffset;
 };

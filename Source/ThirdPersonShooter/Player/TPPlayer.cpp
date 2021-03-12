@@ -4,6 +4,7 @@
 #include "./TPPlayer.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
+#include "../Utils/Structs.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -623,6 +624,34 @@ bool ATPPlayer::HasPlayerState(const EPlayerMovementState MovementState)
 	return false;
 }
 
+bool ATPPlayer::IsMoving() const
+{
+	const EPlayerMovementState topState = GetTopPlayerState();
+	switch (topState)
+	{
+	case EPlayerMovementState::None:
+		return false;
+
+	case EPlayerMovementState::Walk:
+		{
+			if (GetVelocity().Size() == 0)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+	case EPlayerMovementState::Run:
+	case EPlayerMovementState::Crouch:
+	case EPlayerMovementState::Dive:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 EPlayerMovementState ATPPlayer::GetTopPlayerState() const
 {
 	if (_movementStack.Num() <= 0)
@@ -945,16 +974,37 @@ void ATPPlayer::HandleFireReleased()
 
 void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 {
-	if (!CanAcceptPlayerInput() || _currentWeapon == nullptr)
+	if (!CanAcceptShootingInput() || _currentWeapon == nullptr)
 	{
 		return;
 	}
 
 	if (_currentWeapon->CanShoot() && _firePressed)
 	{
-		const FVector2D recoilOffset = _currentWeapon->ShootWithRecoil();
-		AddControllerPitchInput(recoilOffset.Y);
-		AddControllerYawInput(recoilOffset.X);
+		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving());
+
+		const FVector startPosition = FollowCamera->GetComponentLocation();
+		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
+			FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
+			FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
+
+		DrawDebugLine(GetWorld(), startPosition, endPosition, FColor::Red, false, 1);
+
+
+		FCollisionQueryParams collisionParams;
+		collisionParams.AddIgnoredActor(this);
+
+		FHitResult hitResult;
+		bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, startPosition, endPosition, ECollisionChannel::ECC_Visibility, collisionParams);
+
+		FVector sphereLocation = endPosition;
+
+		if (hit)
+		{
+			sphereLocation = hitResult.Location;
+		}
+
+		DrawDebugSphere(GetWorld(), sphereLocation, 5, 16, FColor::Red, false, 1);
 	}
 }
 
@@ -969,6 +1019,16 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
 
 	_currentWeapon = Weapon;
+}
+
+bool ATPPlayer::CanAcceptShootingInput() const
+{
+	if (!CanAcceptPlayerInput() || GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 float ATPPlayer::GetVerticalInput() const
