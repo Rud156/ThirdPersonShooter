@@ -7,6 +7,8 @@
 #include "../Utils/Structs.h"
 #include "BaseShootingWeapon.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRecoilResetDelegate);
+
 class ATPPlayer;
 
 UCLASS()
@@ -28,8 +30,6 @@ private:
 
 	float _currentRecoilResetTime;
 	float _lastShotTime;
-
-	ATPPlayer* _owningPlayer;
 
 protected:
 	virtual void BeginPlay() override;
@@ -121,12 +121,14 @@ public:
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	UCurveFloat* AdsCameraMultiplierY;
 
+	FRecoilResetDelegate RecoilResetCallback;
+
 #pragma endregion
 
 	bool CanShoot() const;
 	FRecoilOffset ShootWithRecoil(const bool IsMoving, const bool IsInAds);
 
-	void PickupWeapon(ATPPlayer* OwningPlayer);
+	void PickupWeapon() const;
 	void DropWeapon();
 
 	ABaseShootingWeapon();

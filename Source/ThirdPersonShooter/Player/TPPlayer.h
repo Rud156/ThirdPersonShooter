@@ -293,6 +293,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION()
 	void ResetPreRecoilCamera();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)

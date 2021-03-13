@@ -1057,7 +1057,8 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 	                                                                            EAttachmentRule::KeepWorld,
 	                                                                            true);
 
-	Weapon->PickupWeapon(this);
+	Weapon->PickupWeapon();
+	Weapon->RecoilResetCallback.AddDynamic(this, &ATPPlayer::ResetPreRecoilCamera);
 	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
 
 	_currentWeapon = Weapon;

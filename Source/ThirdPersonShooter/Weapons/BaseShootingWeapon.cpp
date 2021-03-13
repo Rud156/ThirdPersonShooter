@@ -39,11 +39,7 @@ void ABaseShootingWeapon::Tick(float DeltaSeconds)
 		if (_currentRecoilResetTime <= 0)
 		{
 			_bulletsShot = 0;
-
-			if (_owningPlayer != nullptr)
-			{
-				_owningPlayer->ResetPreRecoilCamera();
-			}
+			RecoilResetCallback.Broadcast();
 		}
 	}
 }
@@ -140,12 +136,10 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	return {cameraOffset, shootingOffset};
 }
 
-void ABaseShootingWeapon::PickupWeapon(ATPPlayer* OwningPlayer)
+void ABaseShootingWeapon::PickupWeapon() const
 {
 	WeaponCollider->SetSimulatePhysics(false);
 	WeaponCollider->SetCollisionProfileName("NoCollision");
-
-	_owningPlayer = OwningPlayer;
 }
 
 void ABaseShootingWeapon::DropWeapon()
@@ -153,5 +147,5 @@ void ABaseShootingWeapon::DropWeapon()
 	WeaponCollider->SetCollisionProfileName("BlockAllDynamic");
 	WeaponCollider->SetSimulatePhysics(true);
 
-	_owningPlayer = nullptr;
+	RecoilResetCallback.Clear();
 }
