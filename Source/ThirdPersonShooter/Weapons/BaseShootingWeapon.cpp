@@ -2,6 +2,7 @@
 
 #include "./BaseShootingWeapon.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
+#include "../Player/TPPlayer.h"
 
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
@@ -9,6 +10,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "Misc/DefaultValueHelper.h"
+#include "ThirdPersonShooter/Player/TPPlayer.h"
 
 ABaseShootingWeapon::ABaseShootingWeapon()
 {
@@ -38,6 +40,11 @@ void ABaseShootingWeapon::Tick(float DeltaSeconds)
 		if (_currentRecoilResetTime <= 0)
 		{
 			_bulletsShot = 0;
+
+			if (_owningPlayer != nullptr)
+			{
+				_owningPlayer->ResetPreRecoilCamera();
+			}
 		}
 	}
 }
@@ -62,17 +69,11 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 		return {FVector2D::ZeroVector, FVector2D::ZeroVector};
 	}
 
-	// Default Firing Error
-
+	// Default/Movement Firing Error
 	const FVector2D firingError = IsMoving ? MovementFiringError : DefaultFiringError;
 	const FVector randomPointInSphere = FMath::VRand();
 	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
 	                                     randomPointInSphere.Z * FMath::RandRange(-firingError.Y, firingError.Y));
-
-	if (_bulletsShot >= VerticalRecoilStartBullet) // Check And Apply Vertical Recoil
-	{
-		shootingOffset.Y += VerticalOffsetAmount;
-	}
 
 	if (_bulletsShot >= HorizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
 	{
@@ -103,6 +104,14 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 			_recoilLeft = !_recoilLeft;
 		}
 	}
+	else if (_bulletsShot >= VerticalRecoilStartBullet) // Check And Apply Vertical Recoil
+	{
+		shootingOffset.Y += VerticalOffsetAmount;
+	}
+
+	// Calculate Camera Offset From Recoil
+	const float xOffset = CameraOffsetMultiplierX->GetFloatValue(_bulletsShot) * shootingOffset.X;
+	const float yOffset = -CameraOffsetMultiplierY->GetFloatValue(_bulletsShot) * shootingOffset.Y;
 
 	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Bullets Shot: " + FString::SanitizeFloat(_bulletsShot));
 
@@ -110,17 +119,21 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
-	return {FVector2D::ZeroVector, shootingOffset};
+	return {FVector2D(xOffset, yOffset), shootingOffset};
 }
 
-void ABaseShootingWeapon::PickupWeapon() const
+void ABaseShootingWeapon::PickupWeapon(ATPPlayer* OwningPlayer)
 {
 	WeaponCollider->SetSimulatePhysics(false);
 	WeaponCollider->SetCollisionProfileName("NoCollision");
+
+	_owningPlayer = OwningPlayer;
 }
 
-void ABaseShootingWeapon::DropWeapon() const
+void ABaseShootingWeapon::DropWeapon()
 {
 	WeaponCollider->SetCollisionProfileName("BlockAllDynamic");
 	WeaponCollider->SetSimulatePhysics(true);
+
+	_owningPlayer = nullptr;
 }

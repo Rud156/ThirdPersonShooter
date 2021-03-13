@@ -7,6 +7,8 @@
 #include "../Utils/Structs.h"
 #include "BaseShootingWeapon.generated.h"
 
+class ATPPlayer;
+
 UCLASS()
 class THIRDPERSONSHOOTER_API ABaseShootingWeapon : public AActor
 {
@@ -29,6 +31,8 @@ private:
 
 	float _currentRecoilResetTime;
 	float _lastShotTime;
+
+	ATPPlayer* _owningPlayer;
 
 protected:
 	virtual void BeginPlay() override;
@@ -83,8 +87,8 @@ public:
 	bool CanShoot() const;
 	FRecoilOffset ShootWithRecoil(const bool IsMoving);
 
-	void PickupWeapon() const;
-	void DropWeapon() const;
+	void PickupWeapon(ATPPlayer* OwningPlayer);
+	void DropWeapon();
 
 	ABaseShootingWeapon();
 	virtual void Tick(float DeltaSeconds) override;

@@ -89,8 +89,13 @@ private:
 	float _vaultLerpAmount;
 	void UpdateVaultForward(const float DeltaTime);
 
+	FVector2D _startRecoilOffset;
+	FVector2D _targetRecoilOffset;
+	float _recoilLerpAmount;
+	bool _resetRecoil;
 	bool _firePressed;
 	ABaseShootingWeapon* _currentWeapon;
+	void UpdateRecoilCamera(const float DeltaTime);
 	void UpdateFirePressed(const float DeltaTime);
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
 	bool CanAcceptShootingInput() const;
@@ -276,11 +281,19 @@ public:
 	UPROPERTY(Category="Player|Weapon", EditAnywhere)
 	float MaxShootDistance;
 
+	UPROPERTY(Category="Player|Weapon", EditAnywhere)
+	float RecoilLerpSpeed;
+
+	UPROPERTY(Category="Player|Weapon", EditAnywhere)
+	float RecoilCameraMultiplier;
+
 #pragma endregion
 
 	ATPPlayer();
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	void ResetPreRecoilCamera();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
 	void PlayerJumpNotify();

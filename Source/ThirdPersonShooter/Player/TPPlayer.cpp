@@ -64,6 +64,10 @@ void ATPPlayer::BeginPlay()
 	_shoulderCameraLerpAmount = 0;
 	_runLerpAmount = 1;
 
+	_recoilLerpAmount = 1;
+	_startRecoilOffset = FVector2D::ZeroVector;
+	_targetRecoilOffset = FVector2D::ZeroVector;
+
 	WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
 	WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
@@ -79,6 +83,7 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateDive(DeltaTime);
 	UpdateRunMeshRotation(DeltaTime);
 	UpdateVaultForward(DeltaTime);
+	UpdateRecoilCamera(DeltaTime);
 	UpdateFirePressed(DeltaTime);
 
 	CheckAndActivateWallClimb();
@@ -971,6 +976,33 @@ void ATPPlayer::HandleFireReleased()
 	_firePressed = false;
 }
 
+void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
+{
+	if (_recoilLerpAmount >= 1)
+	{
+		return;
+	}
+
+	const FVector2D currentInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
+	_recoilLerpAmount += RecoilLerpSpeed * DeltaTime;
+	_recoilLerpAmount = FMath::Clamp(_recoilLerpAmount, 0.0f, 1.0f);
+	const FVector2D nextInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
+
+	const FVector2D diff = nextInputAmount - currentInputAmount;
+	AddControllerPitchInput(diff.Y * RecoilCameraMultiplier);
+	AddControllerYawInput(diff.X * RecoilCameraMultiplier);
+
+	if (_recoilLerpAmount >= 1)
+	{
+		_startRecoilOffset = _targetRecoilOffset;
+
+		if (_resetRecoil)
+		{
+			_startRecoilOffset = FVector2D::ZeroVector;
+			_targetRecoilOffset = FVector2D::ZeroVector;
+		}
+	}
+}
 
 void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 {
@@ -983,13 +1015,23 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 	{
 		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving());
 
+		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
+		_startRecoilOffset = currentRecoilAmount;
+
+		if (_resetRecoil)
+		{
+			_targetRecoilOffset = _startRecoilOffset;
+		}
+		_targetRecoilOffset += recoilOffset.CameraOffset;
+		_recoilLerpAmount = 0;
+		_resetRecoil = false;
+
 		const FVector startPosition = FollowCamera->GetComponentLocation();
 		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
 			FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
 			FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
 
 		DrawDebugLine(GetWorld(), startPosition, endPosition, FColor::Red, false, 1);
-
 
 		FCollisionQueryParams collisionParams;
 		collisionParams.AddIgnoredActor(this);
@@ -1015,10 +1057,18 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 	                                                                            EAttachmentRule::KeepWorld,
 	                                                                            true);
 
-	Weapon->PickupWeapon();
+	Weapon->PickupWeapon(this);
 	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
 
 	_currentWeapon = Weapon;
+}
+
+void ATPPlayer::ResetPreRecoilCamera()
+{
+	_startRecoilOffset = FVector2D::ZeroVector;
+	_targetRecoilOffset = -_targetRecoilOffset;
+	_recoilLerpAmount = 0;
+	_resetRecoil = true;
 }
 
 bool ATPPlayer::CanAcceptShootingInput() const
