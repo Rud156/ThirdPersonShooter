@@ -74,10 +74,10 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	float horizontalSinAmplitude = HorizontalSinAmplitude;
 	int verticalRecoilStartBullet = VerticalRecoilStartBullet;
 	float verticalOffsetAmount = VerticalOffsetAmount;
-	UCurveFloat* cameraMultiplierX = CameraMultiplierX;
-	UCurveFloat* cameraMultiplierY = CameraMultiplierY;
-	UCurveFloat* crossHairOffsetMultiplierX = CrossHairOffsetMultiplierX;
-	UCurveFloat* crossHairOffsetMultiplierY = CrossHairOffsetMultiplierY;
+	UCurveFloat* cameraMultiplierX = CrossHairMultiplierX;
+	UCurveFloat* cameraMultiplierY = CrossHairMultiplierY;
+	UCurveFloat* crossHairOffsetMultiplierX = RaycastOffsetMultiplierX;
+	UCurveFloat* crossHairOffsetMultiplierY = RaycastOffsetMultiplierY;
 	if (IsInAds)
 	{
 		defaultFiringError = AdsDefaultFiringError;
@@ -89,10 +89,10 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 		horizontalSinAmplitude = AdsHorizontalSinAmplitude;
 		verticalRecoilStartBullet = AdsVerticalRecoilStartBullet;
 		verticalOffsetAmount = AdsVerticalOffsetAmount;
-		cameraMultiplierX = AdsCameraMultiplierX;
-		cameraMultiplierY = AdsCameraMultiplierY;
-		crossHairOffsetMultiplierX = AdsCrossHairOffsetMultiplierX;
-		crossHairOffsetMultiplierY = AdsCrossHairOffsetMultiplierY;
+		cameraMultiplierX = AdsCrossHairMultiplierX;
+		cameraMultiplierY = AdsCrossHairMultiplierY;
+		crossHairOffsetMultiplierX = AdsRaycastOffsetMultiplierX;
+		crossHairOffsetMultiplierY = AdsRaycastOffsetMultiplierY;
 	}
 
 	// Default/Movement Firing Error

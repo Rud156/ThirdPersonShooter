@@ -71,16 +71,16 @@ public:
 	float HVOffsetAmount;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CrossHairOffsetMultiplierX;
+	UCurveFloat* RaycastOffsetMultiplierX;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CrossHairOffsetMultiplierY;
+	UCurveFloat* RaycastOffsetMultiplierY;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CameraMultiplierX;
+	UCurveFloat* CrossHairMultiplierX;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CameraMultiplierY;
+	UCurveFloat* CrossHairMultiplierY;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	FVector2D AdsDefaultFiringError;
@@ -110,16 +110,16 @@ public:
 	float AdsHVOffsetAmount;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	UCurveFloat* AdsCrossHairOffsetMultiplierX;
+	UCurveFloat* AdsRaycastOffsetMultiplierX;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	UCurveFloat* AdsCrossHairOffsetMultiplierY;
+	UCurveFloat* AdsRaycastOffsetMultiplierY;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	UCurveFloat* AdsCameraMultiplierX;
+	UCurveFloat* AdsCrossHairMultiplierX;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	UCurveFloat* AdsCameraMultiplierY;
+	UCurveFloat* AdsCrossHairMultiplierY;
 
 	FRecoilResetDelegate RecoilResetCallback;
 
