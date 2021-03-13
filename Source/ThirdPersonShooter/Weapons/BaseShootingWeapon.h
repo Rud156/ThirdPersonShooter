@@ -40,7 +40,7 @@ public:
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	float FireRate;
 
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	float RecoilResetTime;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
@@ -82,10 +82,49 @@ public:
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	UCurveFloat* CameraMultiplierY;
 
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	FVector2D AdsDefaultFiringError;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	FVector2D AdsMovementFiringError;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	int AdsVerticalRecoilStartBullet;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	float AdsVerticalOffsetAmount;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	int AdsHorizontalRecoilStartBullet;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	float AdsHorizontalOffsetAmount;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	float AdsHorizontalSinAmplitude;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	float AdsHorizontalBulletSinMultiplier;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	float AdsHVOffsetAmount;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	UCurveFloat* AdsCrossHairOffsetMultiplierX;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	UCurveFloat* AdsCrossHairOffsetMultiplierY;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	UCurveFloat* AdsCameraMultiplierX;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	UCurveFloat* AdsCameraMultiplierY;
+
 #pragma endregion
 
 	bool CanShoot() const;
-	FRecoilOffset ShootWithRecoil(const bool IsMoving);
+	FRecoilOffset ShootWithRecoil(const bool IsMoving, const bool IsInAds);
 
 	void PickupWeapon(ATPPlayer* OwningPlayer);
 	void DropWeapon();

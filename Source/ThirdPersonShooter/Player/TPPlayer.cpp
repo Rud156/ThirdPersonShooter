@@ -1013,7 +1013,7 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 	if (_currentWeapon->CanShoot() && _firePressed)
 	{
-		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving());
+		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving(), _isInAds);
 
 		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
 		_startRecoilOffset = currentRecoilAmount;
