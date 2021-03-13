@@ -99,7 +99,7 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	const FVector2D firingError = IsMoving ? movementFiringError : defaultFiringError;
 	const FVector randomPointInSphere = FMath::VRand();
 	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
-	                                     randomPointInSphere.Z * FMath::RandRange(0.0f, firingError.Y));
+	                                     FMath::Abs(randomPointInSphere.Z) * FMath::RandRange(0.0f, firingError.Y));
 
 	if (_bulletsShot >= horizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
 	{
