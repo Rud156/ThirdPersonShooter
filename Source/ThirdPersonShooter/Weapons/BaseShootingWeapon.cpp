@@ -10,7 +10,6 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "Misc/DefaultValueHelper.h"
-#include "ThirdPersonShooter/Player/TPPlayer.h"
 
 ABaseShootingWeapon::ABaseShootingWeapon()
 {
@@ -73,36 +72,19 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 	const FVector2D firingError = IsMoving ? MovementFiringError : DefaultFiringError;
 	const FVector randomPointInSphere = FMath::VRand();
 	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
-	                                     randomPointInSphere.Z * FMath::RandRange(-firingError.Y, firingError.Y));
+	                                     randomPointInSphere.Z * FMath::RandRange(0.0f, firingError.Y));
 
 	if (_bulletsShot >= HorizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
 	{
-		if (_randomLRBulletCounter == 0)
-		{
-			if (_recoilLeft)
-			{
-				_randomLRBulletCounter = FMath::RandRange(HorizontalMinLeftBulletCount, HorizontalMaxLeftBulletCount);
-			}
-			else
-			{
-				_randomLRBulletCounter = FMath::RandRange(HorizontalMinRightBulletCount, HorizontalMaxRightBulletCount);
-			}
-		}
+		shootingOffset.Y = firingError.Y + FMath::RandRange(-HVOffsetAmount, HVOffsetAmount);
+		shootingOffset.X += HorizontalOffsetAmount;
 
-		if (_recoilLeft)
-		{
-			shootingOffset.X += HorizontalOffsetAmount;
-		}
-		else
-		{
-			shootingOffset.X -= HorizontalOffsetAmount;
-		}
+		int horizontalBullets = _bulletsShot - HorizontalRecoilStartBullet;
+		horizontalBullets *= HorizontalBulletSinMultiplier;
+		horizontalBullets %= 360;
+		const float sinAngle = FMath::DegreesToRadians(horizontalBullets);
 
-		_randomLRBulletCounter -= 1;
-		if (_randomLRBulletCounter <= 0)
-		{
-			_recoilLeft = !_recoilLeft;
-		}
+		shootingOffset.X *= FMath::Sin(sinAngle) * HorizontalSinAmplitude;
 	}
 	else if (_bulletsShot >= VerticalRecoilStartBullet) // Check And Apply Vertical Recoil
 	{
@@ -110,8 +92,13 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 	}
 
 	// Calculate Camera Offset From Recoil
-	const float xOffset = CameraOffsetMultiplierX->GetFloatValue(_bulletsShot) * shootingOffset.X;
-	const float yOffset = -CameraOffsetMultiplierY->GetFloatValue(_bulletsShot) * shootingOffset.Y;
+	FVector2D cameraOffset = FVector2D(shootingOffset.X, -shootingOffset.Y);
+	cameraOffset.X *= CameraMultiplierX->GetFloatValue(_bulletsShot);
+	cameraOffset.Y *= CameraMultiplierY->GetFloatValue(_bulletsShot);
+
+	// Calculate Offset From CrossHair
+	shootingOffset.X *= CrossHairOffsetMultiplierX->GetFloatValue(_bulletsShot);
+	shootingOffset.Y *= CrossHairOffsetMultiplierY->GetFloatValue(_bulletsShot);
 
 	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Bullets Shot: " + FString::SanitizeFloat(_bulletsShot));
 
@@ -119,7 +106,7 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving)
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
-	return {FVector2D(xOffset, yOffset), shootingOffset};
+	return {cameraOffset, shootingOffset};
 }
 
 void ABaseShootingWeapon::PickupWeapon(ATPPlayer* OwningPlayer)

@@ -26,9 +26,6 @@ private:
 
 	int _bulletsShot;
 
-	int _randomLRBulletCounter;
-	bool _recoilLeft;
-
 	float _currentRecoilResetTime;
 	float _lastShotTime;
 
@@ -62,25 +59,28 @@ public:
 	int HorizontalRecoilStartBullet;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	int HorizontalMinLeftBulletCount;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	int HorizontalMaxLeftBulletCount;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	int HorizontalMinRightBulletCount;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	int HorizontalMaxRightBulletCount;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	float HorizontalOffsetAmount;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CameraOffsetMultiplierX;
+	float HorizontalSinAmplitude;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CameraOffsetMultiplierY;
+	float HorizontalBulletSinMultiplier;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	float HVOffsetAmount;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CrossHairOffsetMultiplierX;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CrossHairOffsetMultiplierY;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CameraMultiplierX;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CameraMultiplierY;
 
 #pragma endregion
 
