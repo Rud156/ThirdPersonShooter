@@ -103,6 +103,7 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
 	                                     FMath::Abs(randomPointInSphere.Z) * FMath::RandRange(0.0f, firingError.Y));
 
+	bool multNegative = false;
 	if (_bulletsShot >= horizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
 	{
 		shootingOffset.Y = firingError.Y + FMath::RandRange(-hVOffsetAmount, hVOffsetAmount);
@@ -110,12 +111,16 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 		shootingOffset.X = FMath::Abs(shootingOffset.X);
 		shootingOffset.X += horizontalOffsetAmount;
 
-		int horizontalBullets = _bulletsShot - horizontalRecoilStartBullet;
-		horizontalBullets *= horizontalBulletSinMultiplier;
-		horizontalBullets %= 360;
-		const float sinAngle = FMath::DegreesToRadians(horizontalBullets);
+		int sinBulletAngle = _bulletsShot - horizontalRecoilStartBullet;
+		sinBulletAngle *= horizontalBulletSinMultiplier;
+		sinBulletAngle %= 360;
+		const float sinAngle = FMath::DegreesToRadians(sinBulletAngle);
 
 		shootingOffset.X *= FMath::Sin(sinAngle) * horizontalSinAmplitude;
+		if (sinBulletAngle > 90 && sinBulletAngle < 270)
+		{
+			multNegative = true;
+		}
 	}
 	else if (_bulletsShot >= verticalRecoilStartBullet) // Check And Apply Vertical Recoil
 	{
@@ -125,6 +130,11 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	// Calculate Camera Offset From Recoil
 	FVector2D cameraOffset = FVector2D(shootingOffset.X, -shootingOffset.Y);
 	cameraOffset.X *= cameraMultiplierX->GetFloatValue(_bulletsShot);
+	cameraOffset.X = FMath::Abs(cameraOffset.X);
+	if (multNegative)
+	{
+		cameraOffset.X = -cameraOffset.X;
+	}
 	cameraOffset.Y *= cameraMultiplierY->GetFloatValue(_bulletsShot);
 
 	// Calculate Offset From CrossHair
