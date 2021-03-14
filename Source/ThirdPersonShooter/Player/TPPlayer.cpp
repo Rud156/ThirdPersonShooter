@@ -67,6 +67,7 @@ void ATPPlayer::BeginPlay()
 	_recoilLerpAmount = 1;
 	_startRecoilOffset = FVector2D::ZeroVector;
 	_targetRecoilOffset = FVector2D::ZeroVector;
+	_preRecoilOffset = FVector2D::ZeroVector;
 
 	WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
@@ -1000,6 +1001,9 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 		{
 			_startRecoilOffset = FVector2D::ZeroVector;
 			_targetRecoilOffset = FVector2D::ZeroVector;
+			_preRecoilOffset = FVector2D::ZeroVector;
+			
+			_currentWeapon->ResetRecoilData(0);
 		}
 	}
 }
@@ -1013,15 +1017,19 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 	if (_currentWeapon->CanShoot() && _firePressed)
 	{
-		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving(), _isInAds);
-
 		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
-		_startRecoilOffset = currentRecoilAmount;
-
 		if (_resetRecoil)
 		{
-			_targetRecoilOffset = _startRecoilOffset;
+			_recoilLerpAmount = 1 - _recoilLerpAmount;
+			int bulletsShot = static_cast<int>(_currentWeapon->GetMaxBulletsCurveForRaycast() * _recoilLerpAmount);
+			_currentWeapon->ResetRecoilData(bulletsShot);
+
+			_targetRecoilOffset = currentRecoilAmount;
 		}
+		_startRecoilOffset = currentRecoilAmount;
+
+		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving(), _isInAds);
+
 		_targetRecoilOffset += recoilOffset.CameraOffset;
 		_recoilLerpAmount = 0;
 		_resetRecoil = false;
@@ -1067,7 +1075,15 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 void ATPPlayer::ResetPreRecoilCamera()
 {
 	_startRecoilOffset = FVector2D::ZeroVector;
-	_targetRecoilOffset = -_targetRecoilOffset;
+	if (_preRecoilOffset == FVector2D::ZeroVector)
+	{
+		_preRecoilOffset = _targetRecoilOffset;
+		_targetRecoilOffset = -_targetRecoilOffset;
+	}
+	else
+	{
+		_targetRecoilOffset = -_preRecoilOffset;
+	}
 	_recoilLerpAmount = 0;
 	_resetRecoil = true;
 }

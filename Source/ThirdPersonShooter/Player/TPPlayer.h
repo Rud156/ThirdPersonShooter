@@ -91,6 +91,7 @@ private:
 
 	FVector2D _startRecoilOffset;
 	FVector2D _targetRecoilOffset;
+	FVector2D _preRecoilOffset;
 	float _recoilLerpAmount;
 	bool _resetRecoil;
 	bool _firePressed;

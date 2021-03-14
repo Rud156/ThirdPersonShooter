@@ -4,6 +4,7 @@
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
 #include "../Player/TPPlayer.h"
 
+#include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -15,10 +16,12 @@ ABaseShootingWeapon::ABaseShootingWeapon()
 {
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollider"));
+	WeaponAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("WeaponAudio"));
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionCompoenent"));
 
 	RootComponent = WeaponCollider;
 	WeaponMesh->SetupAttachment(RootComponent);
+	WeaponAudio->SetupAttachment(RootComponent);
 
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -38,7 +41,6 @@ void ABaseShootingWeapon::Tick(float DeltaSeconds)
 
 		if (_currentRecoilResetTime <= 0)
 		{
-			_bulletsShot = 0;
 			RecoilResetCallback.Broadcast();
 		}
 	}
@@ -104,6 +106,8 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	if (_bulletsShot >= horizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
 	{
 		shootingOffset.Y = firingError.Y + FMath::RandRange(-hVOffsetAmount, hVOffsetAmount);
+
+		shootingOffset.X = FMath::Abs(shootingOffset.X);
 		shootingOffset.X += horizontalOffsetAmount;
 
 		int horizontalBullets = _bulletsShot - horizontalRecoilStartBullet;
@@ -133,7 +137,13 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
+	WeaponAudio->Play();
 	return {cameraOffset, shootingOffset};
+}
+
+void ABaseShootingWeapon::ResetRecoilData(const int BulletsShot)
+{
+	_bulletsShot = BulletsShot;
 }
 
 void ABaseShootingWeapon::PickupWeapon() const
@@ -148,4 +158,13 @@ void ABaseShootingWeapon::DropWeapon()
 	WeaponCollider->SetSimulatePhysics(true);
 
 	RecoilResetCallback.Clear();
+}
+
+int ABaseShootingWeapon::GetMaxBulletsCurveForRaycast() const
+{
+	float minRange = 0;
+	float maxRange = 0;
+
+	RaycastOffsetMultiplierX->GetTimeRange(minRange, maxRange);
+	return static_cast<int>(maxRange);
 }

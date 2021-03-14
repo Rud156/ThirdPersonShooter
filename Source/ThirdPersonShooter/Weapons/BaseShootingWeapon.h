@@ -23,6 +23,9 @@ private:
 	UPROPERTY(Category="Collider", VisibleDefaultsOnly)
 	class UBoxComponent* WeaponCollider;
 
+	UPROPERTY(Category="Audio", VisibleDefaultsOnly)
+	class UAudioComponent* WeaponAudio;
+
 	UPROPERTY(Category="Interaction", VisibleDefaultsOnly)
 	class UInteractionComponent* InteractionComponent;
 
@@ -126,10 +129,14 @@ public:
 #pragma endregion
 
 	bool CanShoot() const;
+	
 	FRecoilOffset ShootWithRecoil(const bool IsMoving, const bool IsInAds);
+	void ResetRecoilData(const int BulletsShot);
 
 	void PickupWeapon() const;
 	void DropWeapon();
+
+	int GetMaxBulletsCurveForRaycast() const;
 
 	ABaseShootingWeapon();
 	virtual void Tick(float DeltaSeconds) override;
