@@ -27,10 +27,12 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* InteractCastPoint;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	class UHealthAndDamageComponent* HealthAndDamage;
+
 	float _horizontalInput;
 	float _verticalInput;
 
-	TArray<EPlayerMovementState> _movementStack;
 	void PushPlayerMovementState(const EPlayerMovementState MovementState);
 	void RemovePlayerMovementState(const EPlayerMovementState MovementState);
 	bool HasPlayerState(const EPlayerMovementState MovementState);
@@ -48,8 +50,6 @@ private:
 	bool _isAdsBeforeFalling;
 	void UpdateFalling(const float DeltaTime);
 
-	bool _isLeftShoulder;
-	bool _isInAds;
 	float _shoulderCameraLerpAmount;
 	FVector _shoulderStartPosition;
 	FVector _shoulderEndPosition;
@@ -73,7 +73,6 @@ private:
 
 	EPlayerMovementState _preVJMovementState;
 	bool _isJumpPressed;
-	bool _isClimbing;
 	FHitResult _forwardTrace;
 	FHitResult _heightTrace;
 	FHitResult _forwardHeightTrace;
@@ -95,26 +94,14 @@ private:
 	float _recoilLerpAmount;
 	bool _resetRecoil;
 	bool _firePressed;
-	ABaseShootingWeapon* _currentWeapon;
 	void UpdateRecoilCamera(const float DeltaTime);
 	void UpdateFirePressed(const float DeltaTime);
+	void BulletShot(const FVector StartPosition, const FVector EndPosition) const;
+	void CheckAndDealDamage(AActor* HitActor) const;
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
-	bool CanAcceptShootingInput() const;
+	void DropWeapon(ABaseShootingWeapon* Weapon);
 
-	void MoveForward(const float Value);
-	void MoveRight(const float Value);
-	void TurnAtRate(const float Value);
-	void LookUpRate(const float Value);
-	void HandleJumpPressed();
-	void HandleJumpReleased();
-	void HandleSprintPressed();
-	void HandleCrouchPressed();
-	void HandleShoulderSwapPressed();
-	void HandleDivePressed();
-	void HandleADSPressed();
-	void HandleInteractPressed();
-	void HandleFirePressed();
-	void HandleFireReleased();
+	bool CanAcceptShootingInput() const;
 	bool CanAcceptPlayerInput() const;
 
 protected:
@@ -290,9 +277,146 @@ public:
 
 #pragma endregion
 
-	ATPPlayer();
+#pragma region Networked Data
+
+	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
+	TArray<EPlayerMovementState> N_MovementStack;
+
+	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
+	bool N_IsCameraLeftShoulder;
+
+	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
+	bool N_IsCameraInAds;
+
+	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
+	bool N_IsClimbing;
+
+	UPROPERTY(ReplicatedUsing=OnWeaponDataFromNetwork)
+	ABaseShootingWeapon* N_CurrentWeapon;
+
+	UFUNCTION()
+	void OnDataFromNetwork();
+
+	UFUNCTION()
+	void OnWeaponDataFromNetwork(ABaseShootingWeapon* PreviousWeapon);
+
+#pragma endregion
+
+#pragma region Controller Input
+
+	void MoveForward(const float Value);
+	void Client_MoveForward(const float Value);
+	UFUNCTION(Server, Reliable)
+	void Server_MoveForward(const float Value);
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_MoveForward(const float Value);
+
+	void MoveRight(const float Value);
+	void Client_MoveRight(const float Value);
+	UFUNCTION(Server, Reliable)
+	void Server_MoveRight(const float Value);
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_MoveRight(const float Value);
+
+	void TurnAtRate(const float Value);
+	void Client_TurnAtRate(const float Value);
+	UFUNCTION(Server, Reliable)
+	void Server_TurnAtRate(const float Value);
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_TurnAtRate(const float Value);
+
+	void LookUpRate(const float Value);
+	void Client_LookUpRate(const float Value);
+	UFUNCTION(Server, Reliable)
+	void Server_LookUpControlRotation(const FRotator ControlRotation);
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_LookUpControlRotation(const FRotator ControlRotation);
+
+	void HandleJumpPressed();
+	void Client_HandleJumpPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleJumpPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleJumpPressed();
+
+	void HandleJumpReleased();
+	void Client_HandleJumpReleased();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleJumpReleased();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleJumpReleased();
+
+	void HandleSprintPressed();
+	void Client_HandleSprintPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleSprintPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleSprintPressed();
+
+	void HandleCrouchPressed();
+	void Client_HandleCrouchPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleCrouchPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleCrouchPressed();
+
+	void HandleShoulderSwapPressed();
+	void Client_HandleShoulderSwapPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleShoulderSwapPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleShoulderSwapPressed();
+
+	void HandleDivePressed();
+	void Client_HandleDivePressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleDivePressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleDivePressed();
+
+	void HandleADSPressed();
+	void Client_HandleADSPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleADSPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleADSPressed();
+
+	void HandleInteractPressed();
+	void Client_HandleInteractPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleInteractPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleInteractPressed();
+
+	void HandleDropPressed();
+	void Client_HandleDropPressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleDropPressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleDropPressed();
+
+	void HandleFirePressed();
+	void Client_HandleFirePressed();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleFirePressed();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleFirePressed();
+
+	void HandleFireReleased();
+	void Client_HandleFireReleased();
+	UFUNCTION(Server, Reliable)
+	void Server_HandleFireReleased();
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_HandleFireReleased();
+	UFUNCTION(Server, Reliable)
+	void Server_BulletShot(const FVector StartPosition, const FVector EndPosition);
+	UFUNCTION(NetMulticast, Reliable)
+	void Remote_BulletShot(const FVector StartPosition, const FVector EndPosition);
+
+#pragma endregion
+
+	ATPPlayer(const class FObjectInitializer& PCIP);
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UFUNCTION()
 	void ResetPreRecoilCamera();

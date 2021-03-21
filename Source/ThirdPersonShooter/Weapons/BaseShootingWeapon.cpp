@@ -12,7 +12,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Misc/DefaultValueHelper.h"
 
-ABaseShootingWeapon::ABaseShootingWeapon()
+#include "Net/UnrealNetwork.h"
+
+ABaseShootingWeapon::ABaseShootingWeapon(const class FObjectInitializer& PCIP) : Super(PCIP)
 {
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollider"));
@@ -57,6 +59,11 @@ bool ABaseShootingWeapon::CanShoot() const
 	}
 
 	return false;
+}
+
+void ABaseShootingWeapon::PlayAudio() const
+{
+	WeaponAudio->Play();
 }
 
 FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bool IsInAds)
@@ -147,7 +154,6 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
-	WeaponAudio->Play();
 	return {cameraOffset, shootingOffset};
 }
 
@@ -156,18 +162,22 @@ void ABaseShootingWeapon::ResetRecoilData(const int BulletsShot)
 	_bulletsShot = BulletsShot;
 }
 
-void ABaseShootingWeapon::PickupWeapon() const
+void ABaseShootingWeapon::PickupWeapon()
 {
+	WeaponCollider->SetEnableGravity(false);
 	WeaponCollider->SetSimulatePhysics(false);
 	WeaponCollider->SetCollisionProfileName("NoCollision");
+	SetReplicateMovement(false);
 }
 
 void ABaseShootingWeapon::DropWeapon()
 {
 	WeaponCollider->SetCollisionProfileName("BlockAllDynamic");
 	WeaponCollider->SetSimulatePhysics(true);
+	WeaponCollider->SetEnableGravity(true);
 
 	RecoilResetCallback.Clear();
+	SetReplicateMovement(true);
 }
 
 int ABaseShootingWeapon::GetMaxBulletsCurveForRaycast() const

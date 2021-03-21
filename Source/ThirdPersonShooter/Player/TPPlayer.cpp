@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "./TPPlayer.h"
+#include "../CustomCompoenents//Health/HealthAndDamageComponent.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
 #include "../Utils/Structs.h"
@@ -15,6 +15,7 @@
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 #if WITH_EDITOR
 #include "UnrealEd.h"
@@ -24,7 +25,7 @@
 // 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
 // #endif
 
-ATPPlayer::ATPPlayer()
+ATPPlayer::ATPPlayer(const class FObjectInitializer &PCIP) : Super(PCIP)
 {
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
@@ -47,6 +48,8 @@ ATPPlayer::ATPPlayer()
 	InteractCastPoint = CreateDefaultSubobject<USceneComponent>(TEXT("InteractCastPoint"));
 	InteractCastPoint->SetupAttachment(FollowCamera);
 
+	HealthAndDamage = CreateDefaultSubobject<UHealthAndDamageComponent>(TEXT("HealthAndDamage"));
+
 	PrimaryActorTick.bCanEverTick = true;
 }
 
@@ -57,7 +60,7 @@ void ATPPlayer::BeginPlay()
 	PushPlayerMovementState(EPlayerMovementState::Walk);
 	ApplyChangesToCharacter();
 
-	_isLeftShoulder = false;
+	N_IsCameraLeftShoulder = false;
 	_shoulderStartPosition = CameraRightShoulder;
 	_shoulderEndPosition = CameraRightShoulder;
 	_cameraBoomLength = FVector2D(CameraDefaultBoomLength, CameraDefaultBoomLength);
@@ -90,26 +93,418 @@ void ATPPlayer::Tick(float DeltaTime)
 	CheckAndActivateWallClimb();
 }
 
-void ATPPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void ATPPlayer::Client_MoveForward(const float Value)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	check(PlayerInputComponent);
+	MoveForward(Value);
+	if (!HasAuthority())
+	{
+		Server_MoveForward(Value);
+	}
+	else
+	{
+		Remote_MoveForward(Value);
+	}
+}
 
-	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleJumpPressed);
-	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Released, this, &ATPPlayer::HandleJumpReleased);
-	PlayerInputComponent->BindAction("Sprint", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleSprintPressed);
-	PlayerInputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleCrouchPressed);
-	PlayerInputComponent->BindAction("ShoulderSwap", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleShoulderSwapPressed);
-	PlayerInputComponent->BindAction("Dive", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleDivePressed);
-	PlayerInputComponent->BindAction("ADS", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleADSPressed);
-	PlayerInputComponent->BindAction("Interact", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleInteractPressed);
-	PlayerInputComponent->BindAction("Fire", EInputEvent::IE_Pressed, this, &ATPPlayer::HandleFirePressed);
-	PlayerInputComponent->BindAction("Fire", EInputEvent::IE_Released, this, &ATPPlayer::HandleFireReleased);
+void ATPPlayer::Server_MoveForward_Implementation(const float Value)
+{
+	MoveForward(Value);
+	Remote_MoveForward(Value);
+}
 
-	PlayerInputComponent->BindAxis("Turn", this, &ATPPlayer::TurnAtRate);
-	PlayerInputComponent->BindAxis("LookUp", this, &ATPPlayer::LookUpRate);
-	PlayerInputComponent->BindAxis("MoveForward", this, &ATPPlayer::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &ATPPlayer::MoveRight);
+void ATPPlayer::Remote_MoveForward_Implementation(const float Value)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	MoveForward(Value);
+}
+
+void ATPPlayer::Client_MoveRight(const float Value)
+{
+	MoveRight(Value);
+	if (!HasAuthority())
+	{
+		Server_MoveRight(Value);
+	}
+	else
+	{
+		Remote_MoveRight(Value);
+	}
+}
+
+void ATPPlayer::Server_MoveRight_Implementation(const float Value)
+{
+	MoveRight(Value);
+	Remote_MoveRight(Value);
+}
+
+void ATPPlayer::Remote_MoveRight_Implementation(const float Value)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	MoveRight(Value);
+}
+
+void ATPPlayer::Client_TurnAtRate(const float Value)
+{
+	TurnAtRate(Value);
+	if (!HasAuthority())
+	{
+		Server_TurnAtRate(Value);
+	}
+	else
+	{
+		Remote_TurnAtRate(Value);
+	}
+}
+
+void ATPPlayer::Server_TurnAtRate_Implementation(const float Value)
+{
+	TurnAtRate(Value);
+	Remote_TurnAtRate(Value);
+}
+
+void ATPPlayer::Remote_TurnAtRate_Implementation(const float Value)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	TurnAtRate(Value);
+}
+
+void ATPPlayer::Client_LookUpRate(const float Value)
+{
+	LookUpRate(Value);
+
+	const FRotator controlRotation = GetControlRotation();
+	if (!HasAuthority())
+	{
+		Server_LookUpControlRotation(controlRotation);
+	}
+	else
+	{
+		Remote_LookUpControlRotation(controlRotation);
+	}
+}
+
+void ATPPlayer::Server_LookUpControlRotation_Implementation(const FRotator ControlRotation)
+{
+	CameraBoom->SetWorldRotation(ControlRotation);
+	Remote_LookUpControlRotation(ControlRotation);
+}
+
+void ATPPlayer::Remote_LookUpControlRotation_Implementation(const FRotator ControlRotation)
+{
+	CameraBoom->SetWorldRotation(ControlRotation);
+}
+
+void ATPPlayer::Client_HandleJumpPressed()
+{
+	HandleJumpPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleJumpPressed();
+	}
+	else
+	{
+		Remote_HandleJumpPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleJumpPressed_Implementation()
+{
+	HandleJumpPressed();
+	Remote_HandleJumpPressed();
+}
+
+void ATPPlayer::Remote_HandleJumpPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleJumpPressed();
+}
+
+void ATPPlayer::Client_HandleJumpReleased()
+{
+	HandleJumpReleased();
+	if (!HasAuthority())
+	{
+		Server_HandleJumpReleased();
+	}
+	else
+	{
+		Remote_HandleJumpReleased();
+	}
+}
+
+void ATPPlayer::Server_HandleJumpReleased_Implementation()
+{
+	HandleJumpReleased();
+	Remote_HandleJumpReleased();
+}
+
+void ATPPlayer::Remote_HandleJumpReleased_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleJumpReleased();
+}
+
+void ATPPlayer::Client_HandleSprintPressed()
+{
+	HandleSprintPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleSprintPressed();
+	}
+	else
+	{
+		Remote_HandleSprintPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleSprintPressed_Implementation()
+{
+	HandleSprintPressed();
+	Remote_HandleSprintPressed();
+}
+
+void ATPPlayer::Remote_HandleSprintPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleSprintPressed();
+}
+
+void ATPPlayer::Client_HandleCrouchPressed()
+{
+	HandleCrouchPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleCrouchPressed();
+	}
+	else
+	{
+		Remote_HandleCrouchPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleCrouchPressed_Implementation()
+{
+	HandleCrouchPressed();
+	Remote_HandleCrouchPressed();
+}
+
+void ATPPlayer::Remote_HandleCrouchPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleCrouchPressed();
+}
+
+void ATPPlayer::Client_HandleShoulderSwapPressed()
+{
+	HandleShoulderSwapPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleShoulderSwapPressed();
+	}
+	else
+	{
+		Remote_HandleShoulderSwapPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleShoulderSwapPressed_Implementation()
+{
+	HandleShoulderSwapPressed();
+	Remote_HandleShoulderSwapPressed();
+}
+
+void ATPPlayer::Remote_HandleShoulderSwapPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleShoulderSwapPressed();
+}
+
+void ATPPlayer::Client_HandleDivePressed()
+{
+	HandleDivePressed();
+	if (!HasAuthority())
+	{
+		Server_HandleDivePressed();
+	}
+	else
+	{
+		Remote_HandleDivePressed();
+	}
+}
+
+void ATPPlayer::Server_HandleDivePressed_Implementation()
+{
+	HandleDivePressed();
+	Remote_HandleDivePressed();
+}
+
+void ATPPlayer::Remote_HandleDivePressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleDivePressed();
+}
+
+void ATPPlayer::Client_HandleADSPressed()
+{
+	HandleADSPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleADSPressed();
+	}
+	else
+	{
+		Remote_HandleADSPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleADSPressed_Implementation()
+{
+	HandleADSPressed();
+	Remote_HandleADSPressed();
+}
+
+void ATPPlayer::Remote_HandleADSPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleADSPressed();
+}
+
+void ATPPlayer::Client_HandleInteractPressed()
+{
+	Server_HandleInteractPressed();
+}
+
+void ATPPlayer::Server_HandleInteractPressed_Implementation()
+{
+	HandleInteractPressed();
+}
+
+void ATPPlayer::Remote_HandleInteractPressed_Implementation()
+{
+	if (HasAuthority())
+	{
+		return;
+	}
+
+	HandleInteractPressed();
+}
+
+void ATPPlayer::Client_HandleDropPressed()
+{
+	Server_HandleDropPressed();
+}
+
+void ATPPlayer::Server_HandleDropPressed_Implementation()
+{
+	HandleDropPressed();
+}
+
+void ATPPlayer::Remote_HandleDropPressed_Implementation()
+{
+	if (HasAuthority())
+	{
+		return;
+	}
+
+	HandleDropPressed();
+}
+
+void ATPPlayer::Client_HandleFirePressed()
+{
+	HandleFirePressed();
+	if (!HasAuthority())
+	{
+		Server_HandleFirePressed();
+	}
+	else
+	{
+		Remote_HandleFirePressed();
+	}
+}
+
+void ATPPlayer::Server_HandleFirePressed_Implementation()
+{
+	HandleFirePressed();
+	Remote_HandleFirePressed();
+}
+
+void ATPPlayer::Remote_HandleFirePressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleFirePressed();
+}
+
+void ATPPlayer::Client_HandleFireReleased()
+{
+	HandleFireReleased();
+	if (!HasAuthority())
+	{
+		Server_HandleFireReleased();
+	}
+	else
+	{
+		Remote_HandleFireReleased();
+	}
+}
+
+void ATPPlayer::Server_HandleFireReleased_Implementation()
+{
+	HandleFireReleased();
+	Remote_HandleFireReleased();
+}
+
+void ATPPlayer::Remote_HandleFireReleased_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleFireReleased();
 }
 
 void ATPPlayer::MoveForward(const float Value)
@@ -120,13 +515,16 @@ void ATPPlayer::MoveForward(const float Value)
 		return;
 	}
 
-	if (Controller != nullptr && Value != 0.0f)
+	if (Value != 0.0f)
 	{
-		const FRotator rotation = GetControlRotation();
-		const FRotator yawRotation(0, rotation.Yaw, 0);
+		if (IsLocallyControlled() || HasAuthority())
+		{
+			const FRotator rotation = GetControlRotation();
+			const FRotator yawRotation(0, rotation.Yaw, 0);
 
-		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::X);
-		AddMovementInput(direction, Value);
+			const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::X);
+			AddMovementInput(direction, Value);
+		}
 	}
 
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
@@ -148,29 +546,38 @@ void ATPPlayer::MoveRight(const float Value)
 		return;
 	}
 
-	if (Controller != nullptr && Value != 0.0f)
+	if (Value != 0.0f)
 	{
-		const FRotator rotation = Controller->GetControlRotation();
-		const FRotator yawRotation(0, rotation.Yaw, 0);
+		if (IsLocallyControlled() || HasAuthority())
+		{
+			const FRotator rotation = Controller->GetControlRotation();
+			const FRotator yawRotation(0, rotation.Yaw, 0);
 
-		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::Y);
-		AddMovementInput(direction, Value);
+			const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::Y);
+			AddMovementInput(direction, Value);
+		}
 	}
 }
 
 void ATPPlayer::LookUpRate(const float Value)
 {
-	AddControllerPitchInput(Value * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		AddControllerPitchInput(Value * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 void ATPPlayer::TurnAtRate(const float Value)
 {
-	if (_isClimbing)
+	if (N_IsClimbing)
 	{
 		return;
 	}
 
-	AddControllerYawInput(Value * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		AddControllerYawInput(Value * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	}
 }
 
 void ATPPlayer::HandleJumpPressed()
@@ -196,7 +603,11 @@ void ATPPlayer::HandleJumpPressed()
 	}
 
 	PlayerJumpNotify();
-	Jump();
+
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		Jump();
+	}
 }
 
 void ATPPlayer::HandleJumpReleased()
@@ -213,15 +624,15 @@ void ATPPlayer::UpdateFalling(const float DeltaTime)
 		_lastFrameFalling = isFalling;
 		if (_isAdsBeforeFalling)
 		{
-			HandleADSPressed();
+			Client_HandleADSPressed();
 		}
 	}
 	else if (isFalling && !_lastFrameFalling) // Handle Character Jumped...
 	{
-		if (_isInAds)
+		if (N_IsCameraInAds)
 		{
 			_isAdsBeforeFalling = true;
-			HandleADSPressed();
+			Client_HandleADSPressed();
 		}
 		else
 		{
@@ -239,9 +650,9 @@ void ATPPlayer::HandleSprintPressed()
 		return;
 	}
 
-	if (_isInAds)
+	if (N_IsCameraInAds)
 	{
-		HandleADSPressed();
+		Client_HandleADSPressed();
 	}
 
 	_runStartRotation = GetMesh()->GetRelativeRotation();
@@ -331,14 +742,14 @@ void ATPPlayer::HandleCrouchPressed()
 
 void ATPPlayer::HandleShoulderSwapPressed()
 {
-	_isLeftShoulder = !_isLeftShoulder;
+	N_IsCameraLeftShoulder = !N_IsCameraLeftShoulder;
 
-	if (_isLeftShoulder)
+	if (N_IsCameraLeftShoulder)
 	{
 		const FDetachmentTransformRules detachmentRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
-		                                                                            EDetachmentRule::KeepWorld,
-		                                                                            EDetachmentRule::KeepWorld,
-		                                                                            true);
+																					EDetachmentRule::KeepWorld,
+																					EDetachmentRule::KeepWorld,
+																					true);
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
 
 		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), LeftHandSocket);
@@ -348,9 +759,9 @@ void ATPPlayer::HandleShoulderSwapPressed()
 	else
 	{
 		const FDetachmentTransformRules detachmentRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
-		                                                                            EDetachmentRule::KeepWorld,
-		                                                                            EDetachmentRule::KeepWorld,
-		                                                                            true);
+																					EDetachmentRule::KeepWorld,
+																					EDetachmentRule::KeepWorld,
+																					true);
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
 
 		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
@@ -366,9 +777,9 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 	_shoulderStartPosition = FollowCamera->GetRelativeLocation();
 	_cameraBoomLength = FVector2D(0, CameraBoom->TargetArmLength);
 	_shoulderCameraLerpAmount = 0;
-	if (_isLeftShoulder)
+	if (N_IsCameraLeftShoulder)
 	{
-		if (_isInAds)
+		if (N_IsCameraInAds)
 		{
 			_shoulderEndPosition = CameraADSLeftShoulder;
 			_cameraBoomLength.X = CameraADSBoomLength;
@@ -381,7 +792,7 @@ void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
 	}
 	else
 	{
-		if (_isInAds)
+		if (N_IsCameraInAds)
 		{
 			_shoulderEndPosition = CameraADSRightShoulder;
 			_cameraBoomLength.X = CameraADSBoomLength;
@@ -414,9 +825,9 @@ void ATPPlayer::HandleDivePressed()
 		ResetPreRunRotation(true);
 	}
 
-	if (_isInAds)
+	if (N_IsCameraInAds)
 	{
-		HandleADSPressed();
+		Client_HandleADSPressed();
 	}
 
 	FVector direction;
@@ -453,14 +864,17 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 
 	if (!_acceptDiveInput)
 	{
-		AddMovementInput(_diveDirection, 1);
+		if (IsLocallyControlled() || HasAuthority())
+		{
+			AddMovementInput(_diveDirection, 1);
+		}
 	}
 	else
 	{
 		const FVector direction = UKismetMathLibrary::GetForwardVector(GetControlRotation()) * _verticalInput +
-			UKismetMathLibrary::GetRightVector(GetControlRotation()) * _horizontalInput;
-		AddMovementInput(direction, 1);
+								  UKismetMathLibrary::GetRightVector(GetControlRotation()) * _horizontalInput;
 
+		AddMovementInput(direction, 1);
 		SetActorRotation(FRotator(0, GetControlRotation().Yaw, 0));
 	}
 
@@ -468,8 +882,8 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 	{
 		const FRotator mappedRotation = FMath::Lerp(_diveStartRotation, _diveEndRotation, _diveLerpAmount);
 		GetMesh()->SetRelativeRotation(mappedRotation);
-		_diveLerpAmount += DiveLerpSpeed * DeltaTime;
 
+		_diveLerpAmount += DiveLerpSpeed * DeltaTime;
 		if (_diveLerpAmount >= 1)
 		{
 			GetMesh()->SetRelativeRotation(_diveEndRotation);
@@ -517,12 +931,12 @@ void ATPPlayer::HandleADSPressed()
 		ApplyChangesToCharacter();
 	}
 
-	_isInAds = !_isInAds;
+	N_IsCameraInAds = !N_IsCameraInAds;
 }
 
 bool ATPPlayer::CanAcceptADSInput() const
 {
-	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive || _isClimbing)
+	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
 	{
 		return false;
 	}
@@ -532,6 +946,11 @@ bool ATPPlayer::CanAcceptADSInput() const
 
 void ATPPlayer::HandleInteractPressed()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	FCollisionQueryParams collisionParams;
 	collisionParams.AddIgnoredActor(this);
 
@@ -548,7 +967,7 @@ void ATPPlayer::HandleInteractPressed()
 
 		if (interactionComponent != nullptr && interactionComponent->CanInteract())
 		{
-			ABaseShootingWeapon* weapon = Cast<ABaseShootingWeapon>(actor);
+			ABaseShootingWeapon *weapon = Cast<ABaseShootingWeapon>(actor);
 			if (weapon != nullptr)
 			{
 				PickupWeapon(weapon);
@@ -557,9 +976,22 @@ void ATPPlayer::HandleInteractPressed()
 	}
 }
 
+void ATPPlayer::HandleDropPressed()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (N_CurrentWeapon != nullptr)
+	{
+		DropWeapon(N_CurrentWeapon);
+	}
+}
+
 bool ATPPlayer::CanAcceptPlayerInput() const
 {
-	if (GetTopPlayerState() == EPlayerMovementState::Dive || _isClimbing)
+	if (GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
 	{
 		return false;
 	}
@@ -575,7 +1007,7 @@ void ATPPlayer::SetCapsuleData(float TargetHeight, float TargetRadius, float Mes
 	_capsuleLerpAmount = 0;
 }
 
-void ATPPlayer::UpdateCapsuleSize(float DeltaTime)
+void ATPPlayer::UpdateCapsuleSize(const float DeltaTime)
 {
 	if (_capsuleLerpAmount > 1 || _capsuleLerpAmount < 0)
 	{
@@ -585,11 +1017,10 @@ void ATPPlayer::UpdateCapsuleSize(float DeltaTime)
 	const float currentHeight = FMath::Lerp(_capsuleHeight.Y, _capsuleHeight.X, _capsuleLerpAmount);
 	const float currentRadius = FMath::Lerp(_capsuleRadius.Y, _capsuleRadius.X, _capsuleLerpAmount);
 	const float meshLocation = FMath::Lerp(_meshLocation.Y, _meshLocation.X, _capsuleLerpAmount);
+	const FVector meshRelativeLocation = GetMesh()->GetRelativeLocation();
 
 	GetCapsuleComponent()->SetCapsuleHalfHeight(currentHeight);
 	GetCapsuleComponent()->SetCapsuleRadius(currentRadius);
-
-	const FVector meshRelativeLocation = GetMesh()->GetRelativeLocation();
 	GetMesh()->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, meshLocation));
 
 	_capsuleLerpAmount += CapsuleSizeLerpRate * DeltaTime;
@@ -603,25 +1034,25 @@ void ATPPlayer::UpdateCapsuleSize(float DeltaTime)
 
 void ATPPlayer::PushPlayerMovementState(EPlayerMovementState MovementState)
 {
-	_movementStack.Add(MovementState);
+	N_MovementStack.Add(MovementState);
 }
 
 void ATPPlayer::RemovePlayerMovementState(const EPlayerMovementState MovementState)
 {
-	for (int i = _movementStack.Num() - 1; i >= 0; i--)
+	for (int i = N_MovementStack.Num() - 1; i >= 0; i--)
 	{
-		if (_movementStack[i] == MovementState)
+		if (N_MovementStack[i] == MovementState)
 		{
-			_movementStack.RemoveAt(i);
+			N_MovementStack.RemoveAt(i);
 		}
 	}
 }
 
 bool ATPPlayer::HasPlayerState(const EPlayerMovementState MovementState)
 {
-	for (int i = 0; i < _movementStack.Num(); i++)
+	for (int i = 0; i < N_MovementStack.Num(); i++)
 	{
-		if (_movementStack[i] == MovementState)
+		if (N_MovementStack[i] == MovementState)
 		{
 			return true;
 		}
@@ -639,14 +1070,14 @@ bool ATPPlayer::IsMoving() const
 		return false;
 
 	case EPlayerMovementState::Walk:
+	{
+		if (GetVelocity().Size() == 0)
 		{
-			if (GetVelocity().Size() == 0)
-			{
-				return false;
-			}
-
-			return true;
+			return false;
 		}
+
+		return true;
+	}
 
 	case EPlayerMovementState::Run:
 	case EPlayerMovementState::Crouch:
@@ -660,12 +1091,12 @@ bool ATPPlayer::IsMoving() const
 
 EPlayerMovementState ATPPlayer::GetTopPlayerState() const
 {
-	if (_movementStack.Num() <= 0)
+	if (N_MovementStack.Num() <= 0)
 	{
 		return EPlayerMovementState::None;
 	}
 
-	return _movementStack.Last();
+	return N_MovementStack.Last();
 }
 
 void ATPPlayer::ApplyChangesToCharacter()
@@ -701,7 +1132,7 @@ void ATPPlayer::ApplyChangesToCharacter()
 	}
 }
 
-void ATPPlayer::WallClimbForwardTrace(bool& CanClimb, bool& CanVault)
+void ATPPlayer::WallClimbForwardTrace(bool &CanClimb, bool &CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FHitResult hitResult;
@@ -730,7 +1161,7 @@ void ATPPlayer::WallClimbForwardTrace(bool& CanClimb, bool& CanVault)
 	}
 }
 
-void ATPPlayer::WallClimbHeightTrace(bool& CanClimb, bool& CanVault)
+void ATPPlayer::WallClimbHeightTrace(bool &CanClimb, bool &CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FHitResult hitResult;
@@ -788,15 +1219,15 @@ bool ATPPlayer::HandleWallClimb()
 	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
 	const float difference = socketLocation.Z - hitLocation.Z;
 
-	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Climb Height: " + FString::SanitizeFloat(difference));
+	// GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Climb Height: " + FString::SanitizeFloat(difference));
 
-	if (!_isClimbing && difference >= -WallClimbHeight && difference <= -WallClimbMinHeight)
+	if (!N_IsClimbing && difference >= -WallClimbHeight && difference <= -WallClimbMinHeight)
 	{
 		_preVJMovementState = GetTopPlayerState();
 		ResetPreRunRotation();
-		if (_isInAds)
+		if (N_IsCameraInAds)
 		{
-			HandleADSPressed();
+			Client_HandleADSPressed();
 		}
 
 		GetCharacterMovement()->StopMovementImmediately();
@@ -808,7 +1239,7 @@ bool ATPPlayer::HandleWallClimb()
 		const FVector newPosition = wallNormal * ClimbAnimXOffset + wallLocation;
 		const FVector delta = FVector(newPosition.X, newPosition.Y, heightLocation.Z - ClimbAnimZOffset);
 
-		_isClimbing = true;
+		N_IsClimbing = true;
 		PlayerClimbNotify(targetRotation, delta);
 
 		return true;
@@ -828,15 +1259,15 @@ bool ATPPlayer::HandleVault()
 	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
 	const float difference = socketLocation.Z - hitLocation.Z;
 
-	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Vault Height: " + FString::SanitizeFloat(difference));
+	// GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Vault Height: " + FString::SanitizeFloat(difference));
 
-	if (!_isClimbing && difference >= VaultWallMinHeight && difference <= VaultWallHeight)
+	if (!N_IsClimbing && difference >= VaultWallMinHeight && difference <= VaultWallHeight)
 	{
 		_preVJMovementState = GetTopPlayerState();
 		ResetPreRunRotation();
-		if (_isInAds)
+		if (N_IsCameraInAds)
 		{
-			HandleADSPressed();
+			Client_HandleADSPressed();
 		}
 
 		GetCharacterMovement()->StopMovementImmediately();
@@ -848,7 +1279,7 @@ bool ATPPlayer::HandleVault()
 		const FVector newPosition = wallNormal * VaultAnimXOffset + wallLocation;
 		const FVector delta = FVector(newPosition.X, newPosition.Y, heightLocation.Z - VaultAnimZOffset);
 
-		_isClimbing = true;
+		N_IsClimbing = true;
 		PlayerVaultNotify(targetRotation, delta);
 
 		return true;
@@ -859,7 +1290,7 @@ bool ATPPlayer::HandleVault()
 
 bool ATPPlayer::CheckAndActivateWallClimb()
 {
-	if (_verticalInput == 1 && _isJumpPressed && !_isClimbing && CanAcceptPlayerInput())
+	if (_verticalInput == 1 && _isJumpPressed && !N_IsClimbing && CanAcceptPlayerInput())
 	{
 		bool forwardClimb = false;
 		bool forwardVault = false;
@@ -892,15 +1323,15 @@ bool ATPPlayer::CheckAndActivateWallClimb()
 
 void ATPPlayer::HandleClimbAnimComplete()
 {
-	_isClimbing = false;
+	N_IsClimbing = false;
 
 	if (_preVJMovementState == EPlayerMovementState::Run)
 	{
-		HandleSprintPressed();
+		Client_HandleSprintPressed();
 	}
 	else if (_preVJMovementState == EPlayerMovementState::Crouch)
 	{
-		HandleCrouchPressed();
+		Client_HandleCrouchPressed();
 	}
 }
 
@@ -909,7 +1340,6 @@ void ATPPlayer::HandleVaultAnimMoveForwardComplete()
 	const FVector forwardVector = GetActorForwardVector();
 	const FRotator rotation = UKismetMathLibrary::MakeRotFromX(forwardVector);
 	SetActorRotation(FRotator(0, rotation.Yaw, 0));
-
 	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
 	_updateVaultForward = true;
 
@@ -929,23 +1359,23 @@ void ATPPlayer::HandleVaultAnimMoveForwardComplete()
 
 void ATPPlayer::HandleVaultAnimComplete()
 {
-	_isClimbing = false;
+	N_IsClimbing = false;
 	_updateVaultForward = false;
 	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
 
 	if (_preVJMovementState == EPlayerMovementState::Run)
 	{
-		HandleSprintPressed();
+		Client_HandleSprintPressed();
 	}
 	else if (_preVJMovementState == EPlayerMovementState::Crouch)
 	{
-		HandleCrouchPressed();
+		Client_HandleCrouchPressed();
 	}
 }
 
 void ATPPlayer::UpdateVaultForward(const float DeltaTime)
 {
-	if (!_isClimbing || !_updateVaultForward)
+	if (!N_IsClimbing || !_updateVaultForward)
 	{
 		return;
 	}
@@ -954,11 +1384,11 @@ void ATPPlayer::UpdateVaultForward(const float DeltaTime)
 	AddMovementInput(direction, 1);
 
 	const FVector location = GetActorLocation();
-
 	if (_vaultLerpAmount <= 1)
 	{
 		const float mappedZLocation = FMath::Lerp(_vaultEndOffset.Y, _vaultEndOffset.X, _vaultLerpAmount);
 		_vaultLerpAmount += VaultLerpSpeed * DeltaTime;
+
 		SetActorLocation(FVector(location.X, location.Y, mappedZLocation));
 	}
 	else if (_vaultLerpAmount > 1)
@@ -979,6 +1409,11 @@ void ATPPlayer::HandleFireReleased()
 
 void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 {
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
 	if (_recoilLerpAmount >= 1)
 	{
 		return;
@@ -993,6 +1428,16 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 	AddControllerPitchInput(diff.Y * RecoilCameraMultiplier);
 	AddControllerYawInput(diff.X * RecoilCameraMultiplier);
 
+	const FRotator controlRotation = GetControlRotation();
+	if (!HasAuthority())
+	{
+		Server_LookUpControlRotation(controlRotation);
+	}
+	else
+	{
+		Remote_LookUpControlRotation(controlRotation);
+	}
+
 	if (_recoilLerpAmount >= 1)
 	{
 		_startRecoilOffset = _targetRecoilOffset;
@@ -1002,33 +1447,38 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 			_startRecoilOffset = FVector2D::ZeroVector;
 			_targetRecoilOffset = FVector2D::ZeroVector;
 			_preRecoilOffset = FVector2D::ZeroVector;
-			
-			_currentWeapon->ResetRecoilData(0);
+
+			N_CurrentWeapon->ResetRecoilData(0);
 		}
 	}
 }
 
 void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 {
-	if (!CanAcceptShootingInput() || _currentWeapon == nullptr)
+	if (!IsLocallyControlled())
 	{
 		return;
 	}
 
-	if (_currentWeapon->CanShoot() && _firePressed)
+	if (!CanAcceptShootingInput() || N_CurrentWeapon == nullptr)
+	{
+		return;
+	}
+
+	if (N_CurrentWeapon->CanShoot() && _firePressed)
 	{
 		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
 		if (_resetRecoil)
 		{
 			_recoilLerpAmount = 1 - _recoilLerpAmount;
-			int bulletsShot = static_cast<int>(_currentWeapon->GetMaxBulletsCurveForRaycast() * _recoilLerpAmount);
-			_currentWeapon->ResetRecoilData(bulletsShot);
+			const int bulletsShot = static_cast<int>(N_CurrentWeapon->GetMaxBulletsCurveForRaycast() * _recoilLerpAmount);
+			N_CurrentWeapon->ResetRecoilData(bulletsShot);
 
 			_targetRecoilOffset = currentRecoilAmount;
 		}
 		_startRecoilOffset = currentRecoilAmount;
 
-		const FRecoilOffset recoilOffset = _currentWeapon->ShootWithRecoil(IsMoving(), _isInAds);
+		const FRecoilOffset recoilOffset = N_CurrentWeapon->ShootWithRecoil(IsMoving(), N_IsCameraInAds);
 
 		_targetRecoilOffset += recoilOffset.CameraOffset;
 		_recoilLerpAmount = 0;
@@ -1036,40 +1486,117 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 		const FVector startPosition = FollowCamera->GetComponentLocation();
 		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
-			FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
-			FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
+									FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
+									FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
 
-		DrawDebugLine(GetWorld(), startPosition, endPosition, FColor::Red, false, 1);
-
-		FCollisionQueryParams collisionParams;
-		collisionParams.AddIgnoredActor(this);
-
-		FHitResult hitResult;
-		bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, startPosition, endPosition, ECollisionChannel::ECC_Visibility, collisionParams);
-
-		FVector sphereLocation = endPosition;
-
-		if (hit)
+		BulletShot(startPosition, endPosition);
+		if (!HasAuthority())
 		{
-			sphereLocation = hitResult.Location;
+			Server_BulletShot(startPosition, endPosition);
 		}
-
-		DrawDebugSphere(GetWorld(), sphereLocation, 5, 16, FColor::Red, false, 1);
+		else
+		{
+			Remote_BulletShot(startPosition, endPosition);
+		}
 	}
 }
 
-void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
+void ATPPlayer::Server_BulletShot_Implementation(const FVector StartPosition, const FVector EndPosition)
+{
+	if (!CanAcceptShootingInput() || N_CurrentWeapon == nullptr || !N_CurrentWeapon->CanShoot() || !_firePressed)
+	{
+		return;
+	}
+
+	BulletShot(StartPosition, EndPosition);
+	Remote_BulletShot(StartPosition, EndPosition);
+}
+
+void ATPPlayer::Remote_BulletShot_Implementation(const FVector StartPosition, const FVector EndPosition)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	BulletShot(StartPosition, EndPosition);
+}
+
+void ATPPlayer::BulletShot(const FVector StartPosition, const FVector EndPosition) const
+{
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->PlayAudio();
+	}
+
+	DrawDebugLine(GetWorld(), StartPosition, EndPosition, FColor::Red, false, 1);
+
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(this);
+
+	FHitResult hitResult;
+	bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, StartPosition, EndPosition, ECollisionChannel::ECC_Visibility, collisionParams);
+
+	FVector sphereLocation = EndPosition;
+
+	if (hit)
+	{
+		sphereLocation = hitResult.Location;
+		if (HasAuthority())
+		{
+			CheckAndDealDamage(hitResult.GetActor());
+		}
+	}
+
+	DrawDebugSphere(GetWorld(), sphereLocation, 5, 16, FColor::Red, false, 1);
+}
+
+void ATPPlayer::CheckAndDealDamage(AActor *HitActor) const
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UActorComponent *healthActorComp = HitActor->GetComponentByClass(UHealthAndDamageComponent::StaticClass());
+	if (healthActorComp != nullptr)
+	{
+		UHealthAndDamageComponent *healthAndDamageComponent = Cast<UHealthAndDamageComponent>(healthActorComp);
+
+		const int damageAmount = N_CurrentWeapon->DamageAmount;
+		healthAndDamageComponent->TakeDamage(damageAmount);
+	}
+}
+
+void ATPPlayer::PickupWeapon(ABaseShootingWeapon *Weapon)
 {
 	const FAttachmentTransformRules attachmentRules = FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
-	                                                                            EAttachmentRule::SnapToTarget,
-	                                                                            EAttachmentRule::KeepWorld,
-	                                                                            true);
+																				EAttachmentRule::SnapToTarget,
+																				EAttachmentRule::KeepWorld,
+																				true);
 
 	Weapon->PickupWeapon();
 	Weapon->RecoilResetCallback.AddDynamic(this, &ATPPlayer::ResetPreRecoilCamera);
 	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
 
-	_currentWeapon = Weapon;
+	N_CurrentWeapon = Weapon;
+}
+
+void ATPPlayer::DropWeapon(ABaseShootingWeapon *Weapon)
+{
+	if (Weapon == nullptr)
+	{
+		return;
+	}
+
+	Weapon->DropWeapon();
+	const FDetachmentTransformRules detachRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
+																			EDetachmentRule::KeepWorld,
+																			EDetachmentRule::KeepWorld,
+																			true);
+	Weapon->DetachFromActor(detachRules);
+
+	N_CurrentWeapon = nullptr;
 }
 
 void ATPPlayer::ResetPreRecoilCamera()
@@ -1122,13 +1649,40 @@ bool ATPPlayer::IsRunning()
 	return true;
 }
 
-
 bool ATPPlayer::IsInAds()
 {
-	return _isInAds;
+	return N_IsCameraInAds;
 }
 
 bool ATPPlayer::IsLeftShoulder()
 {
-	return _isLeftShoulder;
+	return N_IsCameraLeftShoulder;
+}
+
+void ATPPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATPPlayer, N_MovementStack);
+	DOREPLIFETIME(ATPPlayer, N_IsCameraLeftShoulder);
+	DOREPLIFETIME(ATPPlayer, N_IsCameraInAds);
+	DOREPLIFETIME(ATPPlayer, N_IsClimbing);
+	DOREPLIFETIME(ATPPlayer, N_CurrentWeapon);
+}
+
+void ATPPlayer::OnDataFromNetwork()
+{
+	ApplyChangesToCharacter();
+}
+
+void ATPPlayer::OnWeaponDataFromNetwork(ABaseShootingWeapon *PreviousWeapon)
+{
+	if (N_CurrentWeapon != PreviousWeapon)
+	{
+		DropWeapon(PreviousWeapon);
+		if (N_CurrentWeapon != nullptr)
+		{
+			PickupWeapon(N_CurrentWeapon);
+		}
+	}
 }

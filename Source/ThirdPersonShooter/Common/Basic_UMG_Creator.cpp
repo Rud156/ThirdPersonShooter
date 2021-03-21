@@ -4,11 +4,14 @@
 #include "./Basic_UMG_Creator.h"
 #include "../UI/UI_CrossHair.h"
 #include "../UI/UI_Interaction.h"
+#include "../UI/UI_PlayerHealthBar.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
-ABasic_UMG_Creator::ABasic_UMG_Creator()
+#include "Net/UnrealNetwork.h"
+
+ABasic_UMG_Creator::ABasic_UMG_Creator(const class FObjectInitializer& PCIP) : Super(PCIP)
 {
 	PrimaryActorTick.bCanEverTick = false;
 }
@@ -19,14 +22,20 @@ void ABasic_UMG_Creator::BeginPlay()
 
 	const auto playerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 
-	auto crossHair = CreateWidget<UUI_CrossHair>(playerController, CrossHairPrefab);
-	crossHair->AddToViewport();
+	if (playerController != nullptr)
+	{
+		auto crossHair = CreateWidget<UUI_CrossHair>(playerController, CrossHairPrefab);
+		auto interaction = CreateWidget<UUI_Interaction>(playerController, InteractionPrefab);
+		auto playerHealth = CreateWidget<UUI_PlayerHealthBar>(playerController, PlayerHealthPrefab);
 
-	auto interaction = CreateWidget<UUI_Interaction>(playerController, InteractionPrefab);
-	interaction->AddToViewport();
+		crossHair->AddToViewport();
+		interaction->AddToViewport();
+		playerHealth->AddToViewport();
 
-	_crossHairWidget = crossHair;
-	_interactionWidget = interaction;
+		_crossHairWidget = crossHair;
+		_interactionWidget = interaction;
+		_playerHealthWidget = playerHealth;
+	}
 }
 
 UUI_CrossHair* ABasic_UMG_Creator::GetCrossHairWidget() const
@@ -37,4 +46,9 @@ UUI_CrossHair* ABasic_UMG_Creator::GetCrossHairWidget() const
 UUI_Interaction* ABasic_UMG_Creator::GetInteractionWidget() const
 {
 	return _interactionWidget;
+}
+
+UUI_PlayerHealthBar* ABasic_UMG_Creator::GetPlayerHealthWidget() const
+{
+	return _playerHealthWidget;
 }

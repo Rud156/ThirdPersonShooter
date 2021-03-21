@@ -46,6 +46,9 @@ public:
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	float RecoilResetTime;
 
+	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
+	int DamageAmount;
+
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	FVector2D DefaultFiringError;
 
@@ -129,15 +132,16 @@ public:
 #pragma endregion
 
 	bool CanShoot() const;
-	
+
+	void PlayAudio() const;
 	FRecoilOffset ShootWithRecoil(const bool IsMoving, const bool IsInAds);
 	void ResetRecoilData(const int BulletsShot);
 
-	void PickupWeapon() const;
+	void PickupWeapon();
 	void DropWeapon();
 
 	int GetMaxBulletsCurveForRaycast() const;
 
-	ABaseShootingWeapon();
+	ABaseShootingWeapon(const class FObjectInitializer& PCIP);
 	virtual void Tick(float DeltaSeconds) override;
 };
