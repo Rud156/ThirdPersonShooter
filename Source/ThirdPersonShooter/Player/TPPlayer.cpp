@@ -1135,12 +1135,15 @@ void ATPPlayer::ApplyChangesToCharacter()
 void ATPPlayer::WallClimbForwardTrace(bool &CanClimb, bool &CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(this);
+
 	FHitResult hitResult;
 
 	const FVector startLocation = GetActorLocation();
 	const FVector endLocation = GetActorForwardVector() * WallClimbForwardCheck + startLocation;
 
-	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape, collisionParams);
 	if (didCollide)
 	{
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
@@ -1164,12 +1167,15 @@ void ATPPlayer::WallClimbForwardTrace(bool &CanClimb, bool &CanVault)
 void ATPPlayer::WallClimbHeightTrace(bool &CanClimb, bool &CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(this);
+
 	FHitResult hitResult;
 
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * WallClimbHeightForwardCheck;
 	const FVector endLocation = startLocation - WallClimbUpDownOffset;
 
-	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape, collisionParams);
 	if (didCollide)
 	{
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
@@ -1193,12 +1199,15 @@ void ATPPlayer::WallClimbHeightTrace(bool &CanClimb, bool &CanVault)
 bool ATPPlayer::VaultForwardHeightTrace()
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(this);
+
 	FHitResult hitResult;
 
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * (WallClimbHeightForwardCheck + VaultThicknessDistance);
 	const FVector endLocation = startLocation - VaultDownOffset;
 
-	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape);
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape, collisionParams);
 	if (didCollide)
 	{
 		_forwardHeightTrace = hitResult;
@@ -1301,7 +1310,6 @@ bool ATPPlayer::CheckAndActivateWallClimb()
 		WallClimbHeightTrace(heightClimb, heightVault);
 
 		const bool forwardHeightTrace = VaultForwardHeightTrace();
-
 		if (forwardVault && heightVault && forwardHeightTrace && !_lastFrameFalling)
 		{
 			const bool vaulted = HandleVault();
