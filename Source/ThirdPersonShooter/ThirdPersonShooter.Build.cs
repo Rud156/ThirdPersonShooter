@@ -21,7 +21,7 @@ public class ThirdPersonShooter : ModuleRules
             "AIModule",
             "GameplayTasks",
             "NavigationSystem",
-            "UnrealEd",
+            // "UnrealEd",
             "TextAsset"
         });
 

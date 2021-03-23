@@ -13,13 +13,14 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
+#include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 
-#if WITH_EDITOR
-#include "UnrealEd.h"
-#endif
+// #if WITH_EDITOR
+// #include "UnrealEd.h"
+// #endif
 
 // #if WITH_EDITOR
 // 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
