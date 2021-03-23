@@ -94,420 +94,6 @@ void ATPPlayer::Tick(float DeltaTime)
 	CheckAndActivateWallClimb();
 }
 
-void ATPPlayer::Client_MoveForward(const float Value)
-{
-	MoveForward(Value);
-	if (!HasAuthority())
-	{
-		Server_MoveForward(Value);
-	}
-	else
-	{
-		Remote_MoveForward(Value);
-	}
-}
-
-void ATPPlayer::Server_MoveForward_Implementation(const float Value)
-{
-	MoveForward(Value);
-	Remote_MoveForward(Value);
-}
-
-void ATPPlayer::Remote_MoveForward_Implementation(const float Value)
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	MoveForward(Value);
-}
-
-void ATPPlayer::Client_MoveRight(const float Value)
-{
-	MoveRight(Value);
-	if (!HasAuthority())
-	{
-		Server_MoveRight(Value);
-	}
-	else
-	{
-		Remote_MoveRight(Value);
-	}
-}
-
-void ATPPlayer::Server_MoveRight_Implementation(const float Value)
-{
-	MoveRight(Value);
-	Remote_MoveRight(Value);
-}
-
-void ATPPlayer::Remote_MoveRight_Implementation(const float Value)
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	MoveRight(Value);
-}
-
-void ATPPlayer::Client_TurnAtRate(const float Value)
-{
-	TurnAtRate(Value);
-	if (!HasAuthority())
-	{
-		Server_TurnAtRate(Value);
-	}
-	else
-	{
-		Remote_TurnAtRate(Value);
-	}
-}
-
-void ATPPlayer::Server_TurnAtRate_Implementation(const float Value)
-{
-	TurnAtRate(Value);
-	Remote_TurnAtRate(Value);
-}
-
-void ATPPlayer::Remote_TurnAtRate_Implementation(const float Value)
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	TurnAtRate(Value);
-}
-
-void ATPPlayer::Client_LookUpRate(const float Value)
-{
-	LookUpRate(Value);
-
-	const FRotator controlRotation = GetControlRotation();
-	if (!HasAuthority())
-	{
-		Server_LookUpControlRotation(controlRotation);
-	}
-	else
-	{
-		Remote_LookUpControlRotation(controlRotation);
-	}
-}
-
-void ATPPlayer::Server_LookUpControlRotation_Implementation(const FRotator ControlRotation)
-{
-	CameraBoom->SetWorldRotation(ControlRotation);
-	Remote_LookUpControlRotation(ControlRotation);
-}
-
-void ATPPlayer::Remote_LookUpControlRotation_Implementation(const FRotator ControlRotation)
-{
-	CameraBoom->SetWorldRotation(ControlRotation);
-}
-
-void ATPPlayer::Client_HandleJumpPressed()
-{
-	HandleJumpPressed();
-	if (!HasAuthority())
-	{
-		Server_HandleJumpPressed();
-	}
-	else
-	{
-		Remote_HandleJumpPressed();
-	}
-}
-
-void ATPPlayer::Server_HandleJumpPressed_Implementation()
-{
-	HandleJumpPressed();
-	Remote_HandleJumpPressed();
-}
-
-void ATPPlayer::Remote_HandleJumpPressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleJumpPressed();
-}
-
-void ATPPlayer::Client_HandleJumpReleased()
-{
-	HandleJumpReleased();
-	if (!HasAuthority())
-	{
-		Server_HandleJumpReleased();
-	}
-	else
-	{
-		Remote_HandleJumpReleased();
-	}
-}
-
-void ATPPlayer::Server_HandleJumpReleased_Implementation()
-{
-	HandleJumpReleased();
-	Remote_HandleJumpReleased();
-}
-
-void ATPPlayer::Remote_HandleJumpReleased_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleJumpReleased();
-}
-
-void ATPPlayer::Client_HandleSprintPressed()
-{
-	HandleSprintPressed();
-	if (!HasAuthority())
-	{
-		Server_HandleSprintPressed();
-	}
-	else
-	{
-		Remote_HandleSprintPressed();
-	}
-}
-
-void ATPPlayer::Server_HandleSprintPressed_Implementation()
-{
-	HandleSprintPressed();
-	Remote_HandleSprintPressed();
-}
-
-void ATPPlayer::Remote_HandleSprintPressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleSprintPressed();
-}
-
-void ATPPlayer::Client_HandleCrouchPressed()
-{
-	HandleCrouchPressed();
-	if (!HasAuthority())
-	{
-		Server_HandleCrouchPressed();
-	}
-	else
-	{
-		Remote_HandleCrouchPressed();
-	}
-}
-
-void ATPPlayer::Server_HandleCrouchPressed_Implementation()
-{
-	HandleCrouchPressed();
-	Remote_HandleCrouchPressed();
-}
-
-void ATPPlayer::Remote_HandleCrouchPressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleCrouchPressed();
-}
-
-void ATPPlayer::Client_HandleShoulderSwapPressed()
-{
-	HandleShoulderSwapPressed();
-	if (!HasAuthority())
-	{
-		Server_HandleShoulderSwapPressed();
-	}
-	else
-	{
-		Remote_HandleShoulderSwapPressed();
-	}
-}
-
-void ATPPlayer::Server_HandleShoulderSwapPressed_Implementation()
-{
-	HandleShoulderSwapPressed();
-	Remote_HandleShoulderSwapPressed();
-}
-
-void ATPPlayer::Remote_HandleShoulderSwapPressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleShoulderSwapPressed();
-}
-
-void ATPPlayer::Client_HandleDivePressed()
-{
-	HandleDivePressed();
-	if (!HasAuthority())
-	{
-		Server_HandleDivePressed();
-	}
-	else
-	{
-		Remote_HandleDivePressed();
-	}
-}
-
-void ATPPlayer::Server_HandleDivePressed_Implementation()
-{
-	HandleDivePressed();
-	Remote_HandleDivePressed();
-}
-
-void ATPPlayer::Remote_HandleDivePressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleDivePressed();
-}
-
-void ATPPlayer::Client_HandleADSPressed()
-{
-	HandleADSPressed();
-	if (!HasAuthority())
-	{
-		Server_HandleADSPressed();
-	}
-	else
-	{
-		Remote_HandleADSPressed();
-	}
-}
-
-void ATPPlayer::Server_HandleADSPressed_Implementation()
-{
-	HandleADSPressed();
-	Remote_HandleADSPressed();
-}
-
-void ATPPlayer::Remote_HandleADSPressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleADSPressed();
-}
-
-void ATPPlayer::Client_HandleInteractPressed()
-{
-	Server_HandleInteractPressed();
-}
-
-void ATPPlayer::Server_HandleInteractPressed_Implementation()
-{
-	HandleInteractPressed();
-}
-
-void ATPPlayer::Remote_HandleInteractPressed_Implementation()
-{
-	if (HasAuthority())
-	{
-		return;
-	}
-
-	HandleInteractPressed();
-}
-
-void ATPPlayer::Client_HandleDropPressed()
-{
-	Server_HandleDropPressed();
-}
-
-void ATPPlayer::Server_HandleDropPressed_Implementation()
-{
-	HandleDropPressed();
-}
-
-void ATPPlayer::Remote_HandleDropPressed_Implementation()
-{
-	if (HasAuthority())
-	{
-		return;
-	}
-
-	HandleDropPressed();
-}
-
-void ATPPlayer::Client_HandleFirePressed()
-{
-	HandleFirePressed();
-	if (!HasAuthority())
-	{
-		Server_HandleFirePressed();
-	}
-	else
-	{
-		Remote_HandleFirePressed();
-	}
-}
-
-void ATPPlayer::Server_HandleFirePressed_Implementation()
-{
-	HandleFirePressed();
-	Remote_HandleFirePressed();
-}
-
-void ATPPlayer::Remote_HandleFirePressed_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleFirePressed();
-}
-
-void ATPPlayer::Client_HandleFireReleased()
-{
-	HandleFireReleased();
-	if (!HasAuthority())
-	{
-		Server_HandleFireReleased();
-	}
-	else
-	{
-		Remote_HandleFireReleased();
-	}
-}
-
-void ATPPlayer::Server_HandleFireReleased_Implementation()
-{
-	HandleFireReleased();
-	Remote_HandleFireReleased();
-}
-
-void ATPPlayer::Remote_HandleFireReleased_Implementation()
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	HandleFireReleased();
-}
-
 void ATPPlayer::MoveForward(const float Value)
 {
 	_verticalInput = Value;
@@ -539,6 +125,35 @@ void ATPPlayer::MoveForward(const float Value)
 	}
 }
 
+void ATPPlayer::Client_MoveForward(const float Value)
+{
+	MoveForward(Value);
+	if (!HasAuthority())
+	{
+		Server_MoveForward(Value);
+	}
+	else
+	{
+		Remote_MoveForward(Value);
+	}
+}
+
+void ATPPlayer::Server_MoveForward_Implementation(const float Value)
+{
+	MoveForward(Value);
+	Remote_MoveForward(Value);
+}
+
+void ATPPlayer::Remote_MoveForward_Implementation(const float Value)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	MoveForward(Value);
+}
+
 void ATPPlayer::MoveRight(const float Value)
 {
 	_horizontalInput = Value;
@@ -560,12 +175,67 @@ void ATPPlayer::MoveRight(const float Value)
 	}
 }
 
+void ATPPlayer::Client_MoveRight(const float Value)
+{
+	MoveRight(Value);
+	if (!HasAuthority())
+	{
+		Server_MoveRight(Value);
+	}
+	else
+	{
+		Remote_MoveRight(Value);
+	}
+}
+
+void ATPPlayer::Server_MoveRight_Implementation(const float Value)
+{
+	MoveRight(Value);
+	Remote_MoveRight(Value);
+}
+
+void ATPPlayer::Remote_MoveRight_Implementation(const float Value)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	MoveRight(Value);
+}
+
 void ATPPlayer::LookUpRate(const float Value)
 {
 	if (IsLocallyControlled() || HasAuthority())
 	{
 		AddControllerPitchInput(Value * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 	}
+}
+
+void ATPPlayer::Client_LookUpRate(const float Value)
+{
+	LookUpRate(Value);
+
+	const FRotator controlRotation = GetControlRotation();
+	if (!HasAuthority())
+	{
+		Server_LookUpControlRotation(controlRotation);
+	}
+	else
+	{
+		Remote_LookUpControlRotation(controlRotation);
+	}
+}
+
+void ATPPlayer::Server_LookUpControlRotation_Implementation(const FRotator ControlRotation)
+{
+	CameraBoom->SetWorldRotation(ControlRotation);
+	Remote_LookUpControlRotation(ControlRotation);
+}
+
+void ATPPlayer::Remote_LookUpControlRotation_Implementation(const FRotator ControlRotation)
+{
+	CameraBoom->SetWorldRotation(ControlRotation);
 }
 
 void ATPPlayer::TurnAtRate(const float Value)
@@ -579,6 +249,35 @@ void ATPPlayer::TurnAtRate(const float Value)
 	{
 		AddControllerYawInput(Value * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 	}
+}
+
+void ATPPlayer::Client_TurnAtRate(const float Value)
+{
+	TurnAtRate(Value);
+	if (!HasAuthority())
+	{
+		Server_TurnAtRate(Value);
+	}
+	else
+	{
+		Remote_TurnAtRate(Value);
+	}
+}
+
+void ATPPlayer::Server_TurnAtRate_Implementation(const float Value)
+{
+	TurnAtRate(Value);
+	Remote_TurnAtRate(Value);
+}
+
+void ATPPlayer::Remote_TurnAtRate_Implementation(const float Value)
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	TurnAtRate(Value);
 }
 
 void ATPPlayer::HandleJumpPressed()
@@ -611,9 +310,67 @@ void ATPPlayer::HandleJumpPressed()
 	}
 }
 
+void ATPPlayer::Client_HandleJumpPressed()
+{
+	HandleJumpPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleJumpPressed();
+	}
+	else
+	{
+		Remote_HandleJumpPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleJumpPressed_Implementation()
+{
+	HandleJumpPressed();
+	Remote_HandleJumpPressed();
+}
+
+void ATPPlayer::Remote_HandleJumpPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleJumpPressed();
+}
+
 void ATPPlayer::HandleJumpReleased()
 {
 	_isJumpPressed = false;
+}
+
+void ATPPlayer::Client_HandleJumpReleased()
+{
+	HandleJumpReleased();
+	if (!HasAuthority())
+	{
+		Server_HandleJumpReleased();
+	}
+	else
+	{
+		Remote_HandleJumpReleased();
+	}
+}
+
+void ATPPlayer::Server_HandleJumpReleased_Implementation()
+{
+	HandleJumpReleased();
+	Remote_HandleJumpReleased();
+}
+
+void ATPPlayer::Remote_HandleJumpReleased_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleJumpReleased();
 }
 
 void ATPPlayer::UpdateFalling(const float DeltaTime)
@@ -663,6 +420,35 @@ void ATPPlayer::HandleSprintPressed()
 	RemovePlayerMovementState(EPlayerMovementState::Crouch);
 	PushPlayerMovementState(EPlayerMovementState::Run);
 	ApplyChangesToCharacter();
+}
+
+void ATPPlayer::Client_HandleSprintPressed()
+{
+	HandleSprintPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleSprintPressed();
+	}
+	else
+	{
+		Remote_HandleSprintPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleSprintPressed_Implementation()
+{
+	HandleSprintPressed();
+	Remote_HandleSprintPressed();
+}
+
+void ATPPlayer::Remote_HandleSprintPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleSprintPressed();
 }
 
 void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
@@ -741,6 +527,35 @@ void ATPPlayer::HandleCrouchPressed()
 	ApplyChangesToCharacter();
 }
 
+void ATPPlayer::Client_HandleCrouchPressed()
+{
+	HandleCrouchPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleCrouchPressed();
+	}
+	else
+	{
+		Remote_HandleCrouchPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleCrouchPressed_Implementation()
+{
+	HandleCrouchPressed();
+	Remote_HandleCrouchPressed();
+}
+
+void ATPPlayer::Remote_HandleCrouchPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleCrouchPressed();
+}
+
 void ATPPlayer::HandleShoulderSwapPressed()
 {
 	N_IsCameraLeftShoulder = !N_IsCameraLeftShoulder;
@@ -771,6 +586,35 @@ void ATPPlayer::HandleShoulderSwapPressed()
 	}
 
 	ShoulderSwapNotify();
+}
+
+void ATPPlayer::Client_HandleShoulderSwapPressed()
+{
+	HandleShoulderSwapPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleShoulderSwapPressed();
+	}
+	else
+	{
+		Remote_HandleShoulderSwapPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleShoulderSwapPressed_Implementation()
+{
+	HandleShoulderSwapPressed();
+	Remote_HandleShoulderSwapPressed();
+}
+
+void ATPPlayer::Remote_HandleShoulderSwapPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleShoulderSwapPressed();
 }
 
 void ATPPlayer::UpdateShoulderCamera(const float DeltaTime)
@@ -856,6 +700,35 @@ void ATPPlayer::HandleDivePressed()
 	PlayerDiveNotify(HasPlayerState(EPlayerMovementState::Crouch));
 }
 
+void ATPPlayer::Client_HandleDivePressed()
+{
+	HandleDivePressed();
+	if (!HasAuthority())
+	{
+		Server_HandleDivePressed();
+	}
+	else
+	{
+		Remote_HandleDivePressed();
+	}
+}
+
+void ATPPlayer::Server_HandleDivePressed_Implementation()
+{
+	HandleDivePressed();
+	Remote_HandleDivePressed();
+}
+
+void ATPPlayer::Remote_HandleDivePressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleDivePressed();
+}
+
 void ATPPlayer::UpdateDive(const float DeltaTime)
 {
 	if (GetTopPlayerState() != EPlayerMovementState::Dive)
@@ -935,6 +808,35 @@ void ATPPlayer::HandleADSPressed()
 	N_IsCameraInAds = !N_IsCameraInAds;
 }
 
+void ATPPlayer::Client_HandleADSPressed()
+{
+	HandleADSPressed();
+	if (!HasAuthority())
+	{
+		Server_HandleADSPressed();
+	}
+	else
+	{
+		Remote_HandleADSPressed();
+	}
+}
+
+void ATPPlayer::Server_HandleADSPressed_Implementation()
+{
+	HandleADSPressed();
+	Remote_HandleADSPressed();
+}
+
+void ATPPlayer::Remote_HandleADSPressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleADSPressed();
+}
+
 bool ATPPlayer::CanAcceptADSInput() const
 {
 	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
@@ -977,6 +879,16 @@ void ATPPlayer::HandleInteractPressed()
 	}
 }
 
+void ATPPlayer::Client_HandleInteractPressed()
+{
+	Server_HandleInteractPressed();
+}
+
+void ATPPlayer::Server_HandleInteractPressed_Implementation()
+{
+	HandleInteractPressed();
+}
+
 void ATPPlayer::HandleDropPressed()
 {
 	if (!HasAuthority())
@@ -988,6 +900,16 @@ void ATPPlayer::HandleDropPressed()
 	{
 		DropWeapon(N_CurrentWeapon);
 	}
+}
+
+void ATPPlayer::Client_HandleDropPressed()
+{
+	Server_HandleDropPressed();
+}
+
+void ATPPlayer::Server_HandleDropPressed_Implementation()
+{
+	HandleDropPressed();
 }
 
 bool ATPPlayer::CanAcceptPlayerInput() const
@@ -1411,9 +1333,67 @@ void ATPPlayer::HandleFirePressed()
 	_firePressed = true;
 }
 
+void ATPPlayer::Client_HandleFirePressed()
+{
+	HandleFirePressed();
+	if (!HasAuthority())
+	{
+		Server_HandleFirePressed();
+	}
+	else
+	{
+		Remote_HandleFirePressed();
+	}
+}
+
+void ATPPlayer::Server_HandleFirePressed_Implementation()
+{
+	HandleFirePressed();
+	Remote_HandleFirePressed();
+}
+
+void ATPPlayer::Remote_HandleFirePressed_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleFirePressed();
+}
+
 void ATPPlayer::HandleFireReleased()
 {
 	_firePressed = false;
+}
+
+void ATPPlayer::Client_HandleFireReleased()
+{
+	HandleFireReleased();
+	if (!HasAuthority())
+	{
+		Server_HandleFireReleased();
+	}
+	else
+	{
+		Remote_HandleFireReleased();
+	}
+}
+
+void ATPPlayer::Server_HandleFireReleased_Implementation()
+{
+	HandleFireReleased();
+	Remote_HandleFireReleased();
+}
+
+void ATPPlayer::Remote_HandleFireReleased_Implementation()
+{
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		return;
+	}
+
+	HandleFireReleased();
 }
 
 void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)

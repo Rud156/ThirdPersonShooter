@@ -385,15 +385,11 @@ public:
 	void Client_HandleInteractPressed();
 	UFUNCTION(Server, Reliable)
 	void Server_HandleInteractPressed();
-	UFUNCTION(NetMulticast, Reliable)
-	void Remote_HandleInteractPressed();
 
 	void HandleDropPressed();
 	void Client_HandleDropPressed();
 	UFUNCTION(Server, Reliable)
 	void Server_HandleDropPressed();
-	UFUNCTION(NetMulticast, Reliable)
-	void Remote_HandleDropPressed();
 
 	void HandleFirePressed();
 	void Client_HandleFirePressed();
