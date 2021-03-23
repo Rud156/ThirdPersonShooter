@@ -131,6 +131,7 @@ public:
 
 #pragma endregion
 
+	USkeletalMeshComponent* GetMesh() const;
 	bool CanShoot() const;
 
 	void PlayAudio() const;

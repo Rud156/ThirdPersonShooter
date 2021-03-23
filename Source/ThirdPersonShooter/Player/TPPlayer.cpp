@@ -26,7 +26,7 @@
 // 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
 // #endif
 
-ATPPlayer::ATPPlayer(const class FObjectInitializer &PCIP) : Super(PCIP)
+ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP)
 {
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
@@ -563,9 +563,9 @@ void ATPPlayer::HandleShoulderSwapPressed()
 	if (N_IsCameraLeftShoulder)
 	{
 		const FDetachmentTransformRules detachmentRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
-																					EDetachmentRule::KeepWorld,
-																					EDetachmentRule::KeepWorld,
-																					true);
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            true);
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
 
 		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), LeftHandSocket);
@@ -575,9 +575,9 @@ void ATPPlayer::HandleShoulderSwapPressed()
 	else
 	{
 		const FDetachmentTransformRules detachmentRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
-																					EDetachmentRule::KeepWorld,
-																					EDetachmentRule::KeepWorld,
-																					true);
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            EDetachmentRule::KeepWorld,
+		                                                                            true);
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
 
 		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
@@ -746,7 +746,7 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 	else
 	{
 		const FVector direction = UKismetMathLibrary::GetForwardVector(GetControlRotation()) * _verticalInput +
-								  UKismetMathLibrary::GetRightVector(GetControlRotation()) * _horizontalInput;
+			UKismetMathLibrary::GetRightVector(GetControlRotation()) * _horizontalInput;
 
 		AddMovementInput(direction, 1);
 		SetActorRotation(FRotator(0, GetControlRotation().Yaw, 0));
@@ -870,7 +870,7 @@ void ATPPlayer::HandleInteractPressed()
 
 		if (interactionComponent != nullptr && interactionComponent->CanInteract())
 		{
-			ABaseShootingWeapon *weapon = Cast<ABaseShootingWeapon>(actor);
+			ABaseShootingWeapon* weapon = Cast<ABaseShootingWeapon>(actor);
 			if (weapon != nullptr)
 			{
 				PickupWeapon(weapon);
@@ -993,14 +993,14 @@ bool ATPPlayer::IsMoving() const
 		return false;
 
 	case EPlayerMovementState::Walk:
-	{
-		if (GetVelocity().Size() == 0)
 		{
-			return false;
-		}
+			if (GetVelocity().Size() == 0)
+			{
+				return false;
+			}
 
-		return true;
-	}
+			return true;
+		}
 
 	case EPlayerMovementState::Run:
 	case EPlayerMovementState::Crouch:
@@ -1055,7 +1055,7 @@ void ATPPlayer::ApplyChangesToCharacter()
 	}
 }
 
-void ATPPlayer::WallClimbForwardTrace(bool &CanClimb, bool &CanVault)
+void ATPPlayer::WallClimbForwardTrace(bool& CanClimb, bool& CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FCollisionQueryParams collisionParams;
@@ -1066,7 +1066,8 @@ void ATPPlayer::WallClimbForwardTrace(bool &CanClimb, bool &CanVault)
 	const FVector startLocation = GetActorLocation();
 	const FVector endLocation = GetActorForwardVector() * WallClimbForwardCheck + startLocation;
 
-	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape, collisionParams);
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape,
+	                                                         collisionParams);
 	if (didCollide)
 	{
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
@@ -1087,7 +1088,7 @@ void ATPPlayer::WallClimbForwardTrace(bool &CanClimb, bool &CanVault)
 	}
 }
 
-void ATPPlayer::WallClimbHeightTrace(bool &CanClimb, bool &CanVault)
+void ATPPlayer::WallClimbHeightTrace(bool& CanClimb, bool& CanVault)
 {
 	const FCollisionShape collisionShape = FCollisionShape::MakeSphere(10);
 	FCollisionQueryParams collisionParams;
@@ -1098,7 +1099,8 @@ void ATPPlayer::WallClimbHeightTrace(bool &CanClimb, bool &CanVault)
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * WallClimbHeightForwardCheck;
 	const FVector endLocation = startLocation - WallClimbUpDownOffset;
 
-	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape, collisionParams);
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape,
+	                                                         collisionParams);
 	if (didCollide)
 	{
 		bool hasClimbTag = hitResult.GetComponent() != nullptr && hitResult.GetComponent()->ComponentHasTag(WallClimbableTag);
@@ -1130,7 +1132,8 @@ bool ATPPlayer::VaultForwardHeightTrace()
 	const FVector startLocation = GetActorLocation() + WallClimbUpOffset + GetActorForwardVector() * (WallClimbHeightForwardCheck + VaultThicknessDistance);
 	const FVector endLocation = startLocation - VaultDownOffset;
 
-	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape, collisionParams);
+	const bool didCollide = GetWorld()->SweepSingleByChannel(hitResult, startLocation, endLocation, FQuat::Identity, ECollisionChannel::ECC_Visibility, collisionShape,
+	                                                         collisionParams);
 	if (didCollide)
 	{
 		_forwardHeightTrace = hitResult;
@@ -1475,8 +1478,8 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 		const FVector startPosition = FollowCamera->GetComponentLocation();
 		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
-									FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
-									FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
+			FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
+			FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
 
 		BulletShot(startPosition, endPosition);
 		if (!HasAuthority())
@@ -1540,29 +1543,29 @@ void ATPPlayer::BulletShot(const FVector StartPosition, const FVector EndPositio
 	DrawDebugSphere(GetWorld(), sphereLocation, 5, 16, FColor::Red, false, 1);
 }
 
-void ATPPlayer::CheckAndDealDamage(AActor *HitActor) const
+void ATPPlayer::CheckAndDealDamage(AActor* HitActor) const
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
 
-	UActorComponent *healthActorComp = HitActor->GetComponentByClass(UHealthAndDamageComponent::StaticClass());
+	UActorComponent* healthActorComp = HitActor->GetComponentByClass(UHealthAndDamageComponent::StaticClass());
 	if (healthActorComp != nullptr)
 	{
-		UHealthAndDamageComponent *healthAndDamageComponent = Cast<UHealthAndDamageComponent>(healthActorComp);
+		UHealthAndDamageComponent* healthAndDamageComponent = Cast<UHealthAndDamageComponent>(healthActorComp);
 
 		const int damageAmount = N_CurrentWeapon->DamageAmount;
 		healthAndDamageComponent->TakeDamage(damageAmount);
 	}
 }
 
-void ATPPlayer::PickupWeapon(ABaseShootingWeapon *Weapon)
+void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 {
 	const FAttachmentTransformRules attachmentRules = FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
-																				EAttachmentRule::SnapToTarget,
-																				EAttachmentRule::KeepWorld,
-																				true);
+	                                                                            EAttachmentRule::SnapToTarget,
+	                                                                            EAttachmentRule::KeepWorld,
+	                                                                            true);
 
 	Weapon->PickupWeapon();
 	Weapon->RecoilResetCallback.AddDynamic(this, &ATPPlayer::ResetPreRecoilCamera);
@@ -1571,7 +1574,7 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon *Weapon)
 	N_CurrentWeapon = Weapon;
 }
 
-void ATPPlayer::DropWeapon(ABaseShootingWeapon *Weapon)
+void ATPPlayer::DropWeapon(ABaseShootingWeapon* Weapon)
 {
 	if (Weapon == nullptr)
 	{
@@ -1580,9 +1583,9 @@ void ATPPlayer::DropWeapon(ABaseShootingWeapon *Weapon)
 
 	Weapon->DropWeapon();
 	const FDetachmentTransformRules detachRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
-																			EDetachmentRule::KeepWorld,
-																			EDetachmentRule::KeepWorld,
-																			true);
+	                                                                        EDetachmentRule::KeepWorld,
+	                                                                        EDetachmentRule::KeepWorld,
+	                                                                        true);
 	Weapon->DetachFromActor(detachRules);
 
 	N_CurrentWeapon = nullptr;
@@ -1648,7 +1651,32 @@ bool ATPPlayer::IsLeftShoulder()
 	return N_IsCameraLeftShoulder;
 }
 
-void ATPPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+FVector ATPPlayer::GetWeaponAttachPoint()
+{
+	if (N_CurrentWeapon == nullptr)
+	{
+		return FVector::ZeroVector;
+	}
+	else
+	{
+		USkeletalMeshComponent* weaponMesh = N_CurrentWeapon->GetMesh();
+		if (N_IsCameraLeftShoulder)
+		{
+			return weaponMesh->GetSocketLocation("RightHandAttachPoint");
+		}
+		else
+		{
+			return weaponMesh->GetSocketLocation("LeftHandAttachPoint");
+		}
+	}
+}
+
+bool ATPPlayer::HasWeapon()
+{
+	return N_CurrentWeapon != nullptr;
+}
+
+void ATPPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -1664,7 +1692,7 @@ void ATPPlayer::OnDataFromNetwork()
 	ApplyChangesToCharacter();
 }
 
-void ATPPlayer::OnWeaponDataFromNetwork(ABaseShootingWeapon *PreviousWeapon)
+void ATPPlayer::OnWeaponDataFromNetwork(ABaseShootingWeapon* PreviousWeapon)
 {
 	if (N_CurrentWeapon != PreviousWeapon)
 	{

@@ -188,3 +188,8 @@ int ABaseShootingWeapon::GetMaxBulletsCurveForRaycast() const
 	RaycastOffsetMultiplierX->GetTimeRange(minRange, maxRange);
 	return static_cast<int>(maxRange);
 }
+
+USkeletalMeshComponent* ABaseShootingWeapon::GetMesh() const
+{
+	return WeaponMesh;
+}

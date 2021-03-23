@@ -464,4 +464,10 @@ public:
 
 	UFUNCTION(Category = "Player|Camera", BlueprintCallable, BlueprintPure)
 	bool IsLeftShoulder();
+
+	UFUNCTION(Category = "Player|Weapon", BlueprintCallable, BlueprintPure)
+	FVector GetWeaponAttachPoint();
+
+	UFUNCTION(Category = "Player|Weapon", BlueprintCallable, BlueprintPure)
+	bool HasWeapon();
 };
