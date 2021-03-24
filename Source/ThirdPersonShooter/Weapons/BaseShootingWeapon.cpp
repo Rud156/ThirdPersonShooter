@@ -157,6 +157,9 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
+	GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Raycast Offset: " + shootingOffset.ToString());
+	GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Camera Offset: " + cameraOffset.ToString());
+
 	return {cameraOffset, shootingOffset};
 }
 
