@@ -14,7 +14,7 @@
 
 #include "Net/UnrealNetwork.h"
 
-ABaseShootingWeapon::ABaseShootingWeapon(const class FObjectInitializer& PCIP) : Super(PCIP)
+ABaseShootingWeapon::ABaseShootingWeapon(const class FObjectInitializer &PCIP) : Super(PCIP)
 {
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollider"));
@@ -83,10 +83,10 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	float horizontalSinAmplitude = HorizontalSinAmplitude;
 	int verticalRecoilStartBullet = VerticalRecoilStartBullet;
 	float verticalOffsetAmount = VerticalOffsetAmount;
-	UCurveFloat* cameraMultiplierX = CrossHairMultiplierX;
-	UCurveFloat* cameraMultiplierY = CrossHairMultiplierY;
-	UCurveFloat* crossHairOffsetMultiplierX = RaycastOffsetMultiplierX;
-	UCurveFloat* crossHairOffsetMultiplierY = RaycastOffsetMultiplierY;
+	UCurveFloat *cameraMultiplierX = CrossHairMultiplierX;
+	UCurveFloat *cameraMultiplierY = CrossHairMultiplierY;
+	UCurveFloat *crossHairOffsetMultiplierX = RaycastOffsetMultiplierX;
+	UCurveFloat *crossHairOffsetMultiplierY = RaycastOffsetMultiplierY;
 	if (IsInAds)
 	{
 		defaultFiringError = AdsDefaultFiringError;
@@ -108,7 +108,8 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	const FVector2D firingError = IsMoving ? movementFiringError : defaultFiringError;
 	const FVector randomPointInSphere = FMath::VRand();
 	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
-	                                     FMath::Abs(randomPointInSphere.Z) * FMath::RandRange(0.0f, firingError.Y));
+										 FMath::Abs(randomPointInSphere.Z) * FMath::RandRange(0.0f, firingError.Y));
+	FVector2D cameraRecOffset = FVector2D::ZeroVector;
 
 	bool multNegative = false;
 	if (_bulletsShot >= horizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
@@ -117,6 +118,7 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 
 		shootingOffset.X = FMath::Abs(shootingOffset.X);
 		shootingOffset.X += horizontalOffsetAmount;
+		cameraRecOffset.X += horizontalOffsetAmount;
 
 		int sinBulletAngle = _bulletsShot - horizontalRecoilStartBullet;
 		sinBulletAngle *= horizontalBulletSinMultiplier;
@@ -132,10 +134,11 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	else if (_bulletsShot >= verticalRecoilStartBullet) // Check And Apply Vertical Recoil
 	{
 		shootingOffset.Y += verticalOffsetAmount;
+		cameraRecOffset.Y += verticalOffsetAmount;
 	}
 
 	// Calculate Camera Offset From Recoil
-	FVector2D cameraOffset = FVector2D(shootingOffset.X, -shootingOffset.Y);
+	FVector2D cameraOffset = FVector2D(cameraRecOffset.X, -cameraRecOffset.Y);
 	cameraOffset.X *= cameraMultiplierX->GetFloatValue(_bulletsShot);
 	cameraOffset.X = FMath::Abs(cameraOffset.X);
 	if (multNegative)
@@ -189,7 +192,7 @@ int ABaseShootingWeapon::GetMaxBulletsCurveForRaycast() const
 	return static_cast<int>(maxRange);
 }
 
-USkeletalMeshComponent* ABaseShootingWeapon::GetMesh() const
+USkeletalMeshComponent *ABaseShootingWeapon::GetMesh() const
 {
 	return WeaponMesh;
 }
