@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "../Utils/Enums.h"
+#include "../Utils/Structs.h"
 #include "TPPlayer.generated.h"
 
 class ABaseShootingWeapon;
@@ -90,7 +91,6 @@ private:
 
 	FVector2D _startRecoilOffset;
 	FVector2D _targetRecoilOffset;
-	FVector2D _preRecoilOffset;
 	float _recoilLerpAmount;
 	bool _resetRecoil;
 	bool _firePressed;

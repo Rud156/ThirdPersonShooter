@@ -17,6 +17,9 @@ class THIRDPERSONSHOOTER_API ABaseShootingWeapon : public AActor
 	GENERATED_BODY()
 
 private:
+	const float VERTICAL_RECOIL_OFFSET = 10;
+	const float HORIZONTAL_RECOIL_OFFSET = 10;
+
 	UPROPERTY(Category="Mesh", VisibleDefaultsOnly)
 	class USkeletalMeshComponent* WeaponMesh;
 
@@ -49,6 +52,8 @@ public:
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	int DamageAmount;
 
+#pragma region Reocil
+
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	FVector2D DefaultFiringError;
 
@@ -56,16 +61,7 @@ public:
 	FVector2D MovementFiringError;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	int VerticalRecoilStartBullet;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	float VerticalOffsetAmount;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	int HorizontalRecoilStartBullet;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	float HorizontalOffsetAmount;
 
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	float HorizontalSinAmplitude;
@@ -88,6 +84,16 @@ public:
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	UCurveFloat* CrossHairMultiplierY;
 
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CrossHairAdditionalXMovement;
+
+	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
+	UCurveFloat* CrossHairAdditionalYMovement;
+
+#pragma endregion
+
+#pragma region ADS Recoil
+
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	FVector2D AdsDefaultFiringError;
 
@@ -95,16 +101,7 @@ public:
 	FVector2D AdsMovementFiringError;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	int AdsVerticalRecoilStartBullet;
-
-	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	float AdsVerticalOffsetAmount;
-
-	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	int AdsHorizontalRecoilStartBullet;
-
-	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	float AdsHorizontalOffsetAmount;
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	float AdsHorizontalSinAmplitude;
@@ -127,6 +124,14 @@ public:
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	UCurveFloat* AdsCrossHairMultiplierY;
 
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	UCurveFloat* AdsCrossHairAdditionalXMovement;
+
+	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
+	UCurveFloat* AdsCrossHairAdditionalYMovement;
+
+#pragma endregion
+
 	FRecoilResetDelegate RecoilResetCallback;
 
 #pragma endregion
@@ -141,7 +146,7 @@ public:
 	void PickupWeapon();
 	void DropWeapon();
 
-	int GetMaxBulletsCurveForRaycast() const;
+	int GetCurrentBulletCount() const;
 
 	ABaseShootingWeapon(const class FObjectInitializer& PCIP);
 	virtual void Tick(float DeltaSeconds) override;

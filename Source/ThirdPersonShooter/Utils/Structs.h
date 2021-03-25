@@ -10,6 +10,6 @@ struct FRecoilOffset
 {
 	GENERATED_BODY()
 
-	FVector2D CameraOffset;
-	FVector2D RecoilOffset;
+	FVector2D CrossHairOffset;
+	FVector2D RayCastOffset;
 };

@@ -14,7 +14,7 @@
 
 #include "Net/UnrealNetwork.h"
 
-ABaseShootingWeapon::ABaseShootingWeapon(const class FObjectInitializer &PCIP) : Super(PCIP)
+ABaseShootingWeapon::ABaseShootingWeapon(const class FObjectInitializer& PCIP) : Super(PCIP)
 {
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponCollider"));
@@ -78,78 +78,75 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	FVector2D movementFiringError = MovementFiringError;
 	int horizontalRecoilStartBullet = HorizontalRecoilStartBullet;
 	float hVOffsetAmount = HVOffsetAmount;
-	float horizontalOffsetAmount = HorizontalOffsetAmount;
 	float horizontalBulletSinMultiplier = HorizontalBulletSinMultiplier;
 	float horizontalSinAmplitude = HorizontalSinAmplitude;
-	int verticalRecoilStartBullet = VerticalRecoilStartBullet;
-	float verticalOffsetAmount = VerticalOffsetAmount;
-	UCurveFloat *cameraMultiplierX = CrossHairMultiplierX;
-	UCurveFloat *cameraMultiplierY = CrossHairMultiplierY;
-	UCurveFloat *crossHairOffsetMultiplierX = RaycastOffsetMultiplierX;
-	UCurveFloat *crossHairOffsetMultiplierY = RaycastOffsetMultiplierY;
+	UCurveFloat* crossHairMultiplierX = CrossHairMultiplierX;
+	UCurveFloat* crossHairMultiplierY = CrossHairMultiplierY;
+	UCurveFloat* crossHairAdditionalXMovement = CrossHairAdditionalXMovement;
+	UCurveFloat* crossHairAdditionalYMovement = CrossHairAdditionalYMovement;
+	UCurveFloat* raycastOffsetMultiplierX = RaycastOffsetMultiplierX;
+	UCurveFloat* raycastOffsetMultiplierY = RaycastOffsetMultiplierY;
 	if (IsInAds)
 	{
 		defaultFiringError = AdsDefaultFiringError;
 		movementFiringError = AdsMovementFiringError;
 		horizontalRecoilStartBullet = AdsHorizontalRecoilStartBullet;
 		hVOffsetAmount = AdsHVOffsetAmount;
-		horizontalOffsetAmount = AdsHorizontalOffsetAmount;
 		horizontalBulletSinMultiplier = AdsHorizontalBulletSinMultiplier;
 		horizontalSinAmplitude = AdsHorizontalSinAmplitude;
-		verticalRecoilStartBullet = AdsVerticalRecoilStartBullet;
-		verticalOffsetAmount = AdsVerticalOffsetAmount;
-		cameraMultiplierX = AdsCrossHairMultiplierX;
-		cameraMultiplierY = AdsCrossHairMultiplierY;
-		crossHairOffsetMultiplierX = AdsRaycastOffsetMultiplierX;
-		crossHairOffsetMultiplierY = AdsRaycastOffsetMultiplierY;
+		crossHairMultiplierX = AdsCrossHairMultiplierX;
+		crossHairMultiplierY = AdsCrossHairMultiplierY;
+		crossHairAdditionalXMovement = AdsCrossHairAdditionalXMovement;
+		crossHairAdditionalYMovement = AdsCrossHairAdditionalYMovement;
+		raycastOffsetMultiplierX = AdsRaycastOffsetMultiplierX;
+		raycastOffsetMultiplierY = AdsRaycastOffsetMultiplierY;
 	}
 
 	// Default/Movement Firing Error
 	const FVector2D firingError = IsMoving ? movementFiringError : defaultFiringError;
 	const FVector randomPointInSphere = FMath::VRand();
-	FVector2D shootingOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
-										 FMath::Abs(randomPointInSphere.Z) * FMath::RandRange(0.0f, firingError.Y));
-	FVector2D cameraRecOffset = FVector2D::ZeroVector;
+	FVector2D rayCastOffset = FVector2D(randomPointInSphere.X * FMath::RandRange(-firingError.X, firingError.X),
+	                                    FMath::Abs(randomPointInSphere.Z) * FMath::RandRange(0.0f, firingError.Y));
+	FVector2D crossHairOffset = FVector2D::ZeroVector;
 
 	bool multNegative = false;
 	if (_bulletsShot >= horizontalRecoilStartBullet) // Check And Apply Horizontal Recoil
 	{
-		shootingOffset.Y = firingError.Y + FMath::RandRange(-hVOffsetAmount, hVOffsetAmount);
+		rayCastOffset.Y = firingError.Y + FMath::RandRange(-hVOffsetAmount, hVOffsetAmount);
+		rayCastOffset.X = FMath::Abs(rayCastOffset.X);
+		rayCastOffset.X += HORIZONTAL_RECOIL_OFFSET;
 
-		shootingOffset.X = FMath::Abs(shootingOffset.X);
-		shootingOffset.X += horizontalOffsetAmount;
-		cameraRecOffset.X += horizontalOffsetAmount;
+		crossHairOffset.X += HORIZONTAL_RECOIL_OFFSET;
 
 		int sinBulletAngle = _bulletsShot - horizontalRecoilStartBullet;
 		sinBulletAngle *= horizontalBulletSinMultiplier;
 		sinBulletAngle %= 360;
 		const float sinAngle = FMath::DegreesToRadians(sinBulletAngle);
 
-		shootingOffset.X *= FMath::Sin(sinAngle) * horizontalSinAmplitude;
+		rayCastOffset.X *= FMath::Sin(sinAngle) * horizontalSinAmplitude;
 		if (sinBulletAngle > 90 && sinBulletAngle < 270)
 		{
 			multNegative = true;
 		}
 	}
-	else if (_bulletsShot >= verticalRecoilStartBullet) // Check And Apply Vertical Recoil
-	{
-		shootingOffset.Y += verticalOffsetAmount;
-		cameraRecOffset.Y += verticalOffsetAmount;
-	}
+
+	// Always add Vertical Recoil. It is ultimately multiplied by the Curve to obtain final value
+	rayCastOffset.Y += VERTICAL_RECOIL_OFFSET;
+	crossHairOffset.Y += VERTICAL_RECOIL_OFFSET;
 
 	// Calculate Camera Offset From Recoil
-	FVector2D cameraOffset = FVector2D(cameraRecOffset.X, -cameraRecOffset.Y);
-	cameraOffset.X *= cameraMultiplierX->GetFloatValue(_bulletsShot);
-	cameraOffset.X = FMath::Abs(cameraOffset.X);
+	crossHairOffset.X = FMath::Abs(crossHairOffset.X) + crossHairAdditionalXMovement->GetFloatValue(_bulletsShot);
 	if (multNegative)
 	{
-		cameraOffset.X = -cameraOffset.X;
+		crossHairOffset.X = -crossHairOffset.X;
 	}
-	cameraOffset.Y *= cameraMultiplierY->GetFloatValue(_bulletsShot);
+	crossHairOffset.Y = -(FMath::Abs(crossHairOffset.Y) + crossHairAdditionalYMovement->GetFloatValue(_bulletsShot));
+	crossHairOffset.X *= crossHairMultiplierX->GetFloatValue(_bulletsShot);
+	crossHairOffset.Y *= crossHairMultiplierY->GetFloatValue(_bulletsShot);
 
 	// Calculate Offset From CrossHair
-	shootingOffset.X *= crossHairOffsetMultiplierX->GetFloatValue(_bulletsShot);
-	shootingOffset.Y *= crossHairOffsetMultiplierY->GetFloatValue(_bulletsShot);
+	rayCastOffset.X *= raycastOffsetMultiplierX->GetFloatValue(_bulletsShot);
+	rayCastOffset.Y *= raycastOffsetMultiplierY->GetFloatValue(_bulletsShot);
 
 	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Bullets Shot: " + FString::SanitizeFloat(_bulletsShot));
 
@@ -157,15 +154,22 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 	_currentRecoilResetTime = RecoilResetTime;
 
-	GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Raycast Offset: " + shootingOffset.ToString());
-	GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Camera Offset: " + cameraOffset.ToString());
+	// GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Raycast Offset: " + rayCastOffset.ToString());
+	// GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "CrossHair Offset: " + crossHairOffset.ToString());
 
-	return {cameraOffset, shootingOffset};
+	return {crossHairOffset, rayCastOffset};
 }
 
 void ABaseShootingWeapon::ResetRecoilData(const int BulletsShot)
 {
-	_bulletsShot = BulletsShot;
+	if (BulletsShot < 0)
+	{
+		_bulletsShot = 0;
+	}
+	else
+	{
+		_bulletsShot = BulletsShot;
+	}
 }
 
 void ABaseShootingWeapon::PickupWeapon()
@@ -186,16 +190,12 @@ void ABaseShootingWeapon::DropWeapon()
 	SetReplicateMovement(true);
 }
 
-int ABaseShootingWeapon::GetMaxBulletsCurveForRaycast() const
+int ABaseShootingWeapon::GetCurrentBulletCount() const
 {
-	float minRange = 0;
-	float maxRange = 0;
-
-	RaycastOffsetMultiplierX->GetTimeRange(minRange, maxRange);
-	return static_cast<int>(maxRange);
+	return _bulletsShot;
 }
 
-USkeletalMeshComponent *ABaseShootingWeapon::GetMesh() const
+USkeletalMeshComponent* ABaseShootingWeapon::GetMesh() const
 {
 	return WeaponMesh;
 }

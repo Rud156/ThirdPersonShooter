@@ -1,10 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "./TPPlayer.h"
-#include "../CustomCompoenents//Health/HealthAndDamageComponent.h"
+#include "../CustomCompoenents/Health/HealthAndDamageComponent.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
-#include "../Utils/Structs.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -69,9 +68,9 @@ void ATPPlayer::BeginPlay()
 	_runLerpAmount = 1;
 
 	_recoilLerpAmount = 1;
+	_resetRecoil = false;
 	_startRecoilOffset = FVector2D::ZeroVector;
 	_targetRecoilOffset = FVector2D::ZeroVector;
-	_preRecoilOffset = FVector2D::ZeroVector;
 
 	WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
@@ -1438,7 +1437,7 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 		{
 			_startRecoilOffset = FVector2D::ZeroVector;
 			_targetRecoilOffset = FVector2D::ZeroVector;
-			_preRecoilOffset = FVector2D::ZeroVector;
+			_resetRecoil = false;
 
 			N_CurrentWeapon->ResetRecoilData(0);
 		}
@@ -1463,23 +1462,27 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 		if (_resetRecoil)
 		{
 			_recoilLerpAmount = 1 - _recoilLerpAmount;
-			const int bulletsShot = static_cast<int>(N_CurrentWeapon->GetMaxBulletsCurveForRaycast() * _recoilLerpAmount);
-			N_CurrentWeapon->ResetRecoilData(bulletsShot);
+			const int bulletCount = static_cast<int>(N_CurrentWeapon->GetCurrentBulletCount() * _recoilLerpAmount);
+			N_CurrentWeapon->ResetRecoilData(bulletCount);
 
 			_targetRecoilOffset = currentRecoilAmount;
+			_startRecoilOffset = currentRecoilAmount;
 		}
-		_startRecoilOffset = currentRecoilAmount;
+		else
+		{
+			_startRecoilOffset = currentRecoilAmount;
+		}
 
 		const FRecoilOffset recoilOffset = N_CurrentWeapon->ShootWithRecoil(IsMoving(), N_IsCameraInAds);
 
-		_targetRecoilOffset += recoilOffset.CameraOffset;
+		_targetRecoilOffset += recoilOffset.CrossHairOffset;
 		_recoilLerpAmount = 0;
 		_resetRecoil = false;
 
 		const FVector startPosition = FollowCamera->GetComponentLocation();
 		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
-			FollowCamera->GetUpVector() * recoilOffset.RecoilOffset.Y +
-			FollowCamera->GetRightVector() * recoilOffset.RecoilOffset.X;
+			FollowCamera->GetUpVector() * recoilOffset.RayCastOffset.Y +
+			FollowCamera->GetRightVector() * recoilOffset.RayCastOffset.X;
 
 		BulletShot(startPosition, endPosition);
 		if (!HasAuthority())
@@ -1491,6 +1494,14 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 			Remote_BulletShot(startPosition, endPosition);
 		}
 	}
+}
+
+void ATPPlayer::ResetPreRecoilCamera()
+{
+	_startRecoilOffset = _targetRecoilOffset;
+	_targetRecoilOffset = FVector2D::ZeroVector;
+	_recoilLerpAmount = 0;
+	_resetRecoil = true;
 }
 
 void ATPPlayer::Server_BulletShot_Implementation(const FVector StartPosition, const FVector EndPosition)
@@ -1591,22 +1602,6 @@ void ATPPlayer::DropWeapon(ABaseShootingWeapon* Weapon)
 	N_CurrentWeapon = nullptr;
 }
 
-void ATPPlayer::ResetPreRecoilCamera()
-{
-	_startRecoilOffset = FVector2D::ZeroVector;
-	if (_preRecoilOffset == FVector2D::ZeroVector)
-	{
-		_preRecoilOffset = _targetRecoilOffset;
-		_targetRecoilOffset = -_targetRecoilOffset;
-	}
-	else
-	{
-		_targetRecoilOffset = -_preRecoilOffset;
-	}
-	_recoilLerpAmount = 0;
-	_resetRecoil = true;
-}
-
 bool ATPPlayer::CanAcceptShootingInput() const
 {
 	if (!CanAcceptPlayerInput() || GetTopPlayerState() == EPlayerMovementState::Run)
@@ -1633,7 +1628,8 @@ bool ATPPlayer::IsRunning()
 	{
 		return false;
 	}
-	else if (GetTopPlayerState() != EPlayerMovementState::Run)
+
+	if (GetTopPlayerState() != EPlayerMovementState::Run)
 	{
 		return false;
 	}
