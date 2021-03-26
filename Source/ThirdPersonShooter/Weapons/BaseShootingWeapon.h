@@ -50,7 +50,7 @@ public:
 	float RecoilResetDelay;
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
-	float RecoilResetLerpSpeed;
+	UCurveFloat* RecoilResetLerpSpeed;
 	
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	float RecoilShootLerpSpeed;

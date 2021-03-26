@@ -1406,6 +1406,12 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 		return;
 	}
 
+	if (_resetRecoil)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Hello World");
+		_recoilLerpSpeed = N_CurrentWeapon->RecoilResetLerpSpeed->GetFloatValue(_recoilLerpAmount);
+	}
+
 	const float currentAmount = _recoilLerpCurve->GetFloatValue(_recoilLerpAmount);
 	const FVector2D currentInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, currentAmount);
 	_recoilLerpAmount += _recoilLerpSpeed * DeltaTime;
@@ -1497,7 +1503,7 @@ void ATPPlayer::ResetPreRecoilCamera()
 	_targetRecoilOffset = FVector2D::ZeroVector;
 	_recoilLerpAmount = 0;
 	_resetRecoil = true;
-	_recoilLerpSpeed = N_CurrentWeapon->RecoilResetLerpSpeed;
+	_recoilLerpSpeed = N_CurrentWeapon->RecoilResetLerpSpeed->GetFloatValue(0);
 }
 
 void ATPPlayer::ClearRecoilData()
