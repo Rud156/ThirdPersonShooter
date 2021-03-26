@@ -1466,12 +1466,8 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 			N_CurrentWeapon->ResetRecoilData(bulletCount);
 
 			_targetRecoilOffset = currentRecoilAmount;
-			_startRecoilOffset = currentRecoilAmount;
 		}
-		else
-		{
-			_startRecoilOffset = currentRecoilAmount;
-		}
+		_startRecoilOffset = currentRecoilAmount;
 
 		const FRecoilOffset recoilOffset = N_CurrentWeapon->ShootWithRecoil(IsMoving(), N_IsCameraInAds);
 
