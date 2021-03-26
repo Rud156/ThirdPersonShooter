@@ -89,6 +89,9 @@ private:
 	float _vaultLerpAmount;
 	void UpdateVaultForward(const float DeltaTime);
 
+	float _recoilLerpSpeed;
+	UCurveFloat* _recoilLerpCurve;
+	
 	FVector2D _startRecoilOffset;
 	FVector2D _targetRecoilOffset;
 	float _recoilLerpAmount;
@@ -100,6 +103,7 @@ private:
 	void CheckAndDealDamage(AActor* HitActor) const;
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
 	void DropWeapon(ABaseShootingWeapon* Weapon);
+	void ClearRecoilData();
 
 	bool CanAcceptShootingInput() const;
 	bool CanAcceptPlayerInput() const;
@@ -268,9 +272,6 @@ public:
 
 	UPROPERTY(Category="Player|Weapon", EditAnywhere)
 	float MaxShootDistance;
-
-	UPROPERTY(Category="Player|Weapon", EditAnywhere)
-	float RecoilLerpSpeed;
 
 	UPROPERTY(Category="Player|Weapon", EditAnywhere)
 	float RecoilCameraMultiplier;

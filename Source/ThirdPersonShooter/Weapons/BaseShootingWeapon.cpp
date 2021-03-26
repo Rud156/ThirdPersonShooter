@@ -148,8 +148,8 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Bullets Shot: " + FString::SanitizeFloat(_bulletsShot));
 
 	_bulletsShot += 1;
+	_currentRecoilResetTime = RecoilResetDelay;
 	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-	_currentRecoilResetTime = RecoilResetTime;
 
 	// GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Raycast Offset: " + rayCastOffset.ToString());
 	// GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "CrossHair Offset: " + crossHairOffset.ToString());

@@ -47,10 +47,19 @@ public:
 	float FireRate;
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
-	float RecoilResetTime;
+	float RecoilResetDelay;
+
+	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
+	float RecoilResetLerpSpeed;
+	
+	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
+	float RecoilShootLerpSpeed;
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	int DamageAmount;
+
+	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
+	UCurveFloat* RecoilLerpCurve;
 
 #pragma region Reocil
 

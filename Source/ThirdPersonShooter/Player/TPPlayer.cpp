@@ -59,6 +59,7 @@ void ATPPlayer::BeginPlay()
 
 	PushPlayerMovementState(EPlayerMovementState::Walk);
 	ApplyChangesToCharacter();
+	ClearRecoilData();
 
 	N_IsCameraLeftShoulder = false;
 	_shoulderStartPosition = CameraRightShoulder;
@@ -66,11 +67,6 @@ void ATPPlayer::BeginPlay()
 	_cameraBoomLength = FVector2D(CameraDefaultBoomLength, CameraDefaultBoomLength);
 	_shoulderCameraLerpAmount = 0;
 	_runLerpAmount = 1;
-
-	_recoilLerpAmount = 1;
-	_resetRecoil = false;
-	_startRecoilOffset = FVector2D::ZeroVector;
-	_targetRecoilOffset = FVector2D::ZeroVector;
 
 	WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
@@ -1410,10 +1406,12 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 		return;
 	}
 
-	const FVector2D currentInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
-	_recoilLerpAmount += RecoilLerpSpeed * DeltaTime;
+	const float currentAmount = _recoilLerpCurve->GetFloatValue(_recoilLerpAmount);
+	const FVector2D currentInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, currentAmount);
+	_recoilLerpAmount += _recoilLerpSpeed * DeltaTime;
 	_recoilLerpAmount = FMath::Clamp(_recoilLerpAmount, 0.0f, 1.0f);
-	const FVector2D nextInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
+	const float nextAmount = _recoilLerpCurve->GetFloatValue(_recoilLerpAmount);
+	const FVector2D nextInputAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, nextAmount);
 
 	const FVector2D diff = nextInputAmount - currentInputAmount;
 	AddControllerPitchInput(diff.Y * RecoilCameraMultiplier);
@@ -1435,10 +1433,7 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 
 		if (_resetRecoil)
 		{
-			_startRecoilOffset = FVector2D::ZeroVector;
-			_targetRecoilOffset = FVector2D::ZeroVector;
-			_resetRecoil = false;
-
+			ClearRecoilData();
 			N_CurrentWeapon->ResetRecoilData(0);
 		}
 	}
@@ -1458,11 +1453,12 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 	if (N_CurrentWeapon->CanShoot() && _firePressed)
 	{
-		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, _recoilLerpAmount);
+		const float currentAmount = _recoilLerpCurve->GetFloatValue(_recoilLerpAmount);
+		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, currentAmount);
 		if (_resetRecoil)
 		{
-			_recoilLerpAmount = 1 - _recoilLerpAmount;
-			const int bulletCount = static_cast<int>(N_CurrentWeapon->GetCurrentBulletCount() * _recoilLerpAmount);
+			const float recoilLerp = 1 - currentAmount;
+			const int bulletCount = static_cast<int>(N_CurrentWeapon->GetCurrentBulletCount() * recoilLerp);
 			N_CurrentWeapon->ResetRecoilData(bulletCount);
 
 			_targetRecoilOffset = currentRecoilAmount;
@@ -1473,6 +1469,7 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 		_targetRecoilOffset += recoilOffset.CrossHairOffset;
 		_recoilLerpAmount = 0;
+		_recoilLerpSpeed = N_CurrentWeapon->RecoilShootLerpSpeed;
 		_resetRecoil = false;
 
 		const FVector startPosition = FollowCamera->GetComponentLocation();
@@ -1494,10 +1491,22 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 
 void ATPPlayer::ResetPreRecoilCamera()
 {
-	_startRecoilOffset = _targetRecoilOffset;
+	const float amount = _recoilLerpCurve->GetFloatValue(_recoilLerpAmount);
+	const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, amount);
+	_startRecoilOffset = currentRecoilAmount;
 	_targetRecoilOffset = FVector2D::ZeroVector;
 	_recoilLerpAmount = 0;
 	_resetRecoil = true;
+	_recoilLerpSpeed = N_CurrentWeapon->RecoilResetLerpSpeed;
+}
+
+void ATPPlayer::ClearRecoilData()
+{
+	_startRecoilOffset = FVector2D::ZeroVector;
+	_targetRecoilOffset = FVector2D::ZeroVector;
+	_recoilLerpAmount = 1;
+	_recoilLerpSpeed = 1;
+	_resetRecoil = false;
 }
 
 void ATPPlayer::Server_BulletShot_Implementation(const FVector StartPosition, const FVector EndPosition)
@@ -1579,10 +1588,15 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
 
 	N_CurrentWeapon = Weapon;
+
+	_recoilLerpCurve = N_CurrentWeapon->RecoilLerpCurve;
+	ClearRecoilData();
 }
 
 void ATPPlayer::DropWeapon(ABaseShootingWeapon* Weapon)
 {
+	ClearRecoilData();
+
 	if (Weapon == nullptr)
 	{
 		return;
