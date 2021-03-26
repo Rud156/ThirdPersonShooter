@@ -1408,7 +1408,6 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 
 	if (_resetRecoil)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Hello World");
 		_recoilLerpSpeed = N_CurrentWeapon->RecoilResetLerpSpeed->GetFloatValue(_recoilLerpAmount);
 	}
 
