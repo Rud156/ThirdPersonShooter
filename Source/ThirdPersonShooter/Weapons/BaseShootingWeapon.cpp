@@ -82,8 +82,6 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	float horizontalSinAmplitude = HorizontalSinAmplitude;
 	UCurveFloat* crossHairMultiplierX = CrossHairMultiplierX;
 	UCurveFloat* crossHairMultiplierY = CrossHairMultiplierY;
-	UCurveFloat* crossHairAdditionalXMovement = CrossHairAdditionalXMovement;
-	UCurveFloat* crossHairAdditionalYMovement = CrossHairAdditionalYMovement;
 	UCurveFloat* raycastOffsetMultiplierX = RaycastOffsetMultiplierX;
 	UCurveFloat* raycastOffsetMultiplierY = RaycastOffsetMultiplierY;
 	if (IsInAds)
@@ -96,8 +94,6 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 		horizontalSinAmplitude = AdsHorizontalSinAmplitude;
 		crossHairMultiplierX = AdsCrossHairMultiplierX;
 		crossHairMultiplierY = AdsCrossHairMultiplierY;
-		crossHairAdditionalXMovement = AdsCrossHairAdditionalXMovement;
-		crossHairAdditionalYMovement = AdsCrossHairAdditionalYMovement;
 		raycastOffsetMultiplierX = AdsRaycastOffsetMultiplierX;
 		raycastOffsetMultiplierY = AdsRaycastOffsetMultiplierY;
 	}
@@ -116,8 +112,6 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 		rayCastOffset.X = FMath::Abs(rayCastOffset.X);
 		rayCastOffset.X += HORIZONTAL_RECOIL_OFFSET;
 
-		crossHairOffset.X += HORIZONTAL_RECOIL_OFFSET;
-
 		int sinBulletAngle = _bulletsShot - horizontalRecoilStartBullet;
 		sinBulletAngle *= horizontalBulletSinMultiplier;
 		sinBulletAngle %= 360;
@@ -134,13 +128,16 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	rayCastOffset.Y += VERTICAL_RECOIL_OFFSET;
 	crossHairOffset.Y += VERTICAL_RECOIL_OFFSET;
 
+	// Always add Horizontal Recoil. It is ultimately multiplied by the Curve to obtain final value
+	crossHairOffset.X += HORIZONTAL_RECOIL_OFFSET;
+
 	// Calculate Camera Offset From Recoil
-	crossHairOffset.X = FMath::Abs(crossHairOffset.X) + crossHairAdditionalXMovement->GetFloatValue(_bulletsShot);
+	crossHairOffset.X = FMath::Abs(crossHairOffset.X);
 	if (multNegative)
 	{
 		crossHairOffset.X = -crossHairOffset.X;
 	}
-	crossHairOffset.Y = -(FMath::Abs(crossHairOffset.Y) + crossHairAdditionalYMovement->GetFloatValue(_bulletsShot));
+	crossHairOffset.Y = -FMath::Abs(crossHairOffset.Y);
 	crossHairOffset.X *= crossHairMultiplierX->GetFloatValue(_bulletsShot);
 	crossHairOffset.Y *= crossHairMultiplierY->GetFloatValue(_bulletsShot);
 

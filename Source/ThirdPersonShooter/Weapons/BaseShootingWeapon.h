@@ -84,12 +84,6 @@ public:
 	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
 	UCurveFloat* CrossHairMultiplierY;
 
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CrossHairAdditionalXMovement;
-
-	UPROPERTY(Category="Weapon|Recoil", EditAnywhere)
-	UCurveFloat* CrossHairAdditionalYMovement;
-
 #pragma endregion
 
 #pragma region ADS Recoil
@@ -123,12 +117,6 @@ public:
 
 	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
 	UCurveFloat* AdsCrossHairMultiplierY;
-
-	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	UCurveFloat* AdsCrossHairAdditionalXMovement;
-
-	UPROPERTY(Category="Weapon|RecoilADS", EditAnywhere)
-	UCurveFloat* AdsCrossHairAdditionalYMovement;
 
 #pragma endregion
 
