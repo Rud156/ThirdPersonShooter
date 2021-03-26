@@ -56,10 +56,10 @@ public:
 	float RecoilShootLerpSpeed;
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
-	int DamageAmount;
+	UCurveFloat* RecoilLerpCurve;
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
-	UCurveFloat* RecoilLerpCurve;
+	int DamageAmount;
 
 #pragma region Reocil
 
