@@ -35,6 +35,8 @@ void UHealthAndDamageComponent::Server_TakeDamage_Implementation(const int Damag
 	const int lastHealth = N_CurrentHealth;
 	N_CurrentHealth -= damageAmount;
 
+	OnDamageTaken.Broadcast(damageAmount);
+
 	if (lastHealth != N_CurrentHealth)
 	{
 		OnHealthChanged.Broadcast(N_CurrentHealth);

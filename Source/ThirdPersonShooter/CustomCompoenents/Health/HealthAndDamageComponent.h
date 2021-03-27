@@ -10,6 +10,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUnitDied, AActor*, Unit);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHealthChanged, int, NewHealth);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDamageTaken, int, DamageAmount);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class THIRDPERSONSHOOTER_API UHealthAndDamageComponent : public UActorComponent
 {
@@ -32,6 +34,9 @@ public:
 
 	UPROPERTY(Category="Delegates", BlueprintAssignable)
 	FHealthChanged OnHealthChanged;
+
+	UPROPERTY(Category="Delegates", BlueprintAssignable)
+	FDamageTaken OnDamageTaken;
 
 #pragma endregion
 
