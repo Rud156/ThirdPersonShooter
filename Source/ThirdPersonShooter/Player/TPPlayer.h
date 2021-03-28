@@ -22,6 +22,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class USkeletalMeshComponent* PlayerMesh;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* WeaponAttachPoint;
 
@@ -33,6 +36,9 @@ private:
 
 	float _horizontalInput;
 	float _verticalInput;
+
+	void UpdateLookRotation(const float DeltaTime);
+	void SetCameraBoomPitchRotation(const FRotator ControlRotation) const;
 
 	void PushPlayerMovementState(const EPlayerMovementState MovementState);
 	void RemovePlayerMovementState(const EPlayerMovementState MovementState);
@@ -77,6 +83,7 @@ private:
 	FHitResult _forwardTrace;
 	FHitResult _heightTrace;
 	FHitResult _forwardHeightTrace;
+	bool _climbVaultAnimCompleteCalled;
 	void WallClimbForwardTrace(bool& CanClimb, bool& CanVault);
 	void WallClimbHeightTrace(bool& CanClimb, bool& CanVault);
 	bool VaultForwardHeightTrace();
@@ -91,7 +98,7 @@ private:
 
 	float _recoilLerpSpeed;
 	UCurveFloat* _recoilLerpCurve;
-	
+
 	FVector2D _startRecoilOffset;
 	FVector2D _targetRecoilOffset;
 	float _recoilLerpAmount;
@@ -307,30 +314,30 @@ public:
 
 	void MoveForward(const float Value);
 	void Client_MoveForward(const float Value);
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Unreliable)
 	void Server_MoveForward(const float Value);
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Remote_MoveForward(const float Value);
 
 	void MoveRight(const float Value);
 	void Client_MoveRight(const float Value);
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Unreliable)
 	void Server_MoveRight(const float Value);
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Remote_MoveRight(const float Value);
 
 	void TurnAtRate(const float Value);
 	void Client_TurnAtRate(const float Value);
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Unreliable)
 	void Server_TurnAtRate(const float Value);
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Remote_TurnAtRate(const float Value);
 
 	void LookUpRate(const float Value);
 	void Client_LookUpRate(const float Value);
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Unreliable)
 	void Server_LookUpControlRotation(const FRotator ControlRotation);
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Remote_LookUpControlRotation(const FRotator ControlRotation);
 
 	void HandleJumpPressed();

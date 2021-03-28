@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "./TPPlayer.h"
+#include "./CustomPlayerMovement.h"
 #include "../CustomCompoenents/Health/HealthAndDamageComponent.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
@@ -8,6 +9,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -25,7 +27,7 @@
 // 	GUnrealEd->PlayWorld->bDebugPauseExecution = true;
 // #endif
 
-ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP)
+ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP.SetDefaultSubobjectClass<UCustomPlayerMovement>(ACharacter::CharacterMovementComponentName))
 {
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
@@ -42,8 +44,11 @@ ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP)
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("PlayerMesh"));
+	PlayerMesh->SetupAttachment(RootComponent);
+
 	WeaponAttachPoint = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponAttachPoint"));
-	WeaponAttachPoint->SetupAttachment(GetMesh());
+	WeaponAttachPoint->SetupAttachment(PlayerMesh);
 
 	InteractCastPoint = CreateDefaultSubobject<USceneComponent>(TEXT("InteractCastPoint"));
 	InteractCastPoint->SetupAttachment(FollowCamera);
@@ -68,7 +73,7 @@ void ATPPlayer::BeginPlay()
 	_shoulderCameraLerpAmount = 0;
 	_runLerpAmount = 1;
 
-	WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
+	WeaponAttachPoint->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
 	WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
 }
@@ -77,6 +82,7 @@ void ATPPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	UpdateLookRotation(DeltaTime);
 	UpdateCapsuleSize(DeltaTime);
 	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
@@ -161,7 +167,7 @@ void ATPPlayer::MoveRight(const float Value)
 	{
 		if (IsLocallyControlled() || HasAuthority())
 		{
-			const FRotator rotation = Controller->GetControlRotation();
+			const FRotator rotation = GetControlRotation();
 			const FRotator yawRotation(0, rotation.Yaw, 0);
 
 			const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::Y);
@@ -201,36 +207,55 @@ void ATPPlayer::Remote_MoveRight_Implementation(const float Value)
 
 void ATPPlayer::LookUpRate(const float Value)
 {
-	if (IsLocallyControlled() || HasAuthority())
+	if (IsLocallyControlled())
 	{
 		AddControllerPitchInput(Value * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+		const FRotator controlRotation = GetControlRotation();
+		SetCameraBoomPitchRotation(controlRotation);
 	}
+}
+
+void ATPPlayer::UpdateLookRotation(const float DeltaTime)
+{
+	if (IsLocallyControlled())
+	{
+		const FRotator controlRotation = GetControlRotation();
+		if (!HasAuthority())
+		{
+			Server_LookUpControlRotation(controlRotation);
+		}
+		else
+		{
+			Remote_LookUpControlRotation(controlRotation);
+		}
+	}
+}
+
+void ATPPlayer::SetCameraBoomPitchRotation(const FRotator ControlRotation) const
+{
+	FRotator worldRotation = CameraBoom->GetComponentRotation();
+	worldRotation.Pitch = ControlRotation.Pitch;
+	CameraBoom->SetWorldRotation(worldRotation);
 }
 
 void ATPPlayer::Client_LookUpRate(const float Value)
 {
 	LookUpRate(Value);
-
-	const FRotator controlRotation = GetControlRotation();
-	if (!HasAuthority())
-	{
-		Server_LookUpControlRotation(controlRotation);
-	}
-	else
-	{
-		Remote_LookUpControlRotation(controlRotation);
-	}
 }
 
 void ATPPlayer::Server_LookUpControlRotation_Implementation(const FRotator ControlRotation)
 {
-	CameraBoom->SetWorldRotation(ControlRotation);
 	Remote_LookUpControlRotation(ControlRotation);
 }
 
 void ATPPlayer::Remote_LookUpControlRotation_Implementation(const FRotator ControlRotation)
 {
-	CameraBoom->SetWorldRotation(ControlRotation);
+	if (IsLocallyControlled())
+	{
+		return;
+	}
+
+	SetCameraBoomPitchRotation(ControlRotation);
 }
 
 void ATPPlayer::TurnAtRate(const float Value)
@@ -408,7 +433,7 @@ void ATPPlayer::HandleSprintPressed()
 		Client_HandleADSPressed();
 	}
 
-	_runStartRotation = GetMesh()->GetRelativeRotation();
+	_runStartRotation = PlayerMesh->GetRelativeRotation();
 	_runEndRotation = _runStartRotation;
 	_runLerpAmount = 0;
 
@@ -455,7 +480,7 @@ void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
 
 	_runLerpAmount += RunLerpSpeed * DeltaTime;
 	const FRotator mappedRotation = FMath::Lerp(_runStartRotation, _runEndRotation, _runLerpAmount);
-	GetMesh()->SetRelativeRotation(mappedRotation);
+	PlayerMesh->SetRelativeRotation(mappedRotation);
 
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
 	{
@@ -471,7 +496,7 @@ void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
 		}
 		else
 		{
-			_runStartRotation = GetMesh()->GetRelativeRotation();
+			_runStartRotation = PlayerMesh->GetRelativeRotation();
 			_runEndRotation = FRotator(0, DefaultMeshZPosition, 0);
 			_runLerpAmount = 0;
 		}
@@ -479,7 +504,7 @@ void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
 
 	if (_runLerpAmount >= 1)
 	{
-		GetMesh()->SetRelativeRotation(_runEndRotation);
+		PlayerMesh->SetRelativeRotation(_runEndRotation);
 	}
 }
 
@@ -487,13 +512,13 @@ void ATPPlayer::ResetPreRunRotation(const bool ForceReset)
 {
 	if (!ForceReset)
 	{
-		_runStartRotation = GetMesh()->GetRelativeRotation();
+		_runStartRotation = PlayerMesh->GetRelativeRotation();
 		_runEndRotation = FRotator(0, MeshDefaultZRotation, 0);
 		_runLerpAmount = 0;
 	}
 	else
 	{
-		GetMesh()->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
+		PlayerMesh->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
 	}
 }
 
@@ -563,7 +588,7 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		                                                                            true);
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
 
-		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), LeftHandSocket);
+		WeaponAttachPoint->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), LeftHandSocket);
 		WeaponAttachPoint->SetRelativeLocation(LeftAttachmentLocation);
 		WeaponAttachPoint->SetRelativeRotation(LeftAttachmentRotation);
 	}
@@ -575,7 +600,7 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		                                                                            true);
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
 
-		WeaponAttachPoint->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
+		WeaponAttachPoint->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 		WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
 		WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
 	}
@@ -667,7 +692,10 @@ void ATPPlayer::HandleDivePressed()
 
 	if (N_IsCameraInAds)
 	{
-		Client_HandleADSPressed();
+		if (IsLocallyControlled())
+		{
+			Client_HandleADSPressed();
+		}
 	}
 
 	FVector direction;
@@ -683,7 +711,7 @@ void ATPPlayer::HandleDivePressed()
 	const FRotator targetRotation = direction.Rotation() + FRotator(0, MeshDefaultZRotation, 0);
 
 	_diveDirection = direction;
-	_diveStartRotation = GetMesh()->GetRelativeRotation();
+	_diveStartRotation = PlayerMesh->GetRelativeRotation();
 	_diveEndRotation = UKismetMathLibrary::InverseTransformRotation(GetActorTransform(), targetRotation);
 	_diveLerpAmount = 0;
 	_acceptDiveInput = false;
@@ -733,36 +761,43 @@ void ATPPlayer::UpdateDive(const float DeltaTime)
 
 	if (!_acceptDiveInput)
 	{
-		if (IsLocallyControlled() || HasAuthority())
-		{
-			AddMovementInput(_diveDirection, 1);
-		}
+		AddMovementInput(_diveDirection, 1);
 	}
 	else
 	{
-		const FVector direction = UKismetMathLibrary::GetForwardVector(GetControlRotation()) * _verticalInput +
-			UKismetMathLibrary::GetRightVector(GetControlRotation()) * _horizontalInput;
+		FRotator controlRotation;
+		if (IsLocallyControlled())
+		{
+			controlRotation = GetControlRotation();
+		}
+		else
+		{
+			controlRotation = CameraBoom->GetComponentRotation();
+		}
+
+		const FVector direction = UKismetMathLibrary::GetForwardVector(controlRotation) * _verticalInput +
+			UKismetMathLibrary::GetRightVector(controlRotation) * _horizontalInput;
 
 		AddMovementInput(direction, 1);
-		SetActorRotation(FRotator(0, GetControlRotation().Yaw, 0));
+		SetActorRotation(FRotator(0, controlRotation.Yaw, 0));
 	}
 
 	if (_diveLerpAmount < 1)
 	{
 		const FRotator mappedRotation = FMath::Lerp(_diveStartRotation, _diveEndRotation, _diveLerpAmount);
-		GetMesh()->SetRelativeRotation(mappedRotation);
+		PlayerMesh->SetRelativeRotation(mappedRotation);
 
 		_diveLerpAmount += DiveLerpSpeed * DeltaTime;
 		if (_diveLerpAmount >= 1)
 		{
-			GetMesh()->SetRelativeRotation(_diveEndRotation);
+			PlayerMesh->SetRelativeRotation(_diveEndRotation);
 		}
 	}
 }
 
 void ATPPlayer::HandleDiveAnimComplete()
 {
-	GetMesh()->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
+	PlayerMesh->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
 	bUseControllerRotationYaw = true;
 
 	RemovePlayerMovementState(EPlayerMovementState::Dive);
@@ -778,7 +813,7 @@ void ATPPlayer::HandleDiveAnimComplete()
 
 void ATPPlayer::HandleDiveResetAngle()
 {
-	_diveStartRotation = GetMesh()->GetRelativeRotation();
+	_diveStartRotation = PlayerMesh->GetRelativeRotation();
 	_diveEndRotation = FRotator(0, MeshDefaultZRotation, 0);
 	_diveLerpAmount = 0;
 	_acceptDiveInput = true;
@@ -921,7 +956,7 @@ void ATPPlayer::SetCapsuleData(float TargetHeight, float TargetRadius, float Mes
 {
 	_capsuleHeight = FVector2D(TargetHeight, GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
 	_capsuleRadius = FVector2D(TargetRadius, GetCapsuleComponent()->GetUnscaledCapsuleRadius());
-	_meshLocation = FVector2D(MeshTargetPosition, GetMesh()->GetRelativeLocation().Z);
+	_meshLocation = FVector2D(MeshTargetPosition, PlayerMesh->GetRelativeLocation().Z);
 	_capsuleLerpAmount = 0;
 }
 
@@ -935,18 +970,18 @@ void ATPPlayer::UpdateCapsuleSize(const float DeltaTime)
 	const float currentHeight = FMath::Lerp(_capsuleHeight.Y, _capsuleHeight.X, _capsuleLerpAmount);
 	const float currentRadius = FMath::Lerp(_capsuleRadius.Y, _capsuleRadius.X, _capsuleLerpAmount);
 	const float meshLocation = FMath::Lerp(_meshLocation.Y, _meshLocation.X, _capsuleLerpAmount);
-	const FVector meshRelativeLocation = GetMesh()->GetRelativeLocation();
+	const FVector meshRelativeLocation = PlayerMesh->GetRelativeLocation();
 
 	GetCapsuleComponent()->SetCapsuleHalfHeight(currentHeight);
 	GetCapsuleComponent()->SetCapsuleRadius(currentRadius);
-	GetMesh()->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, meshLocation));
+	PlayerMesh->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, meshLocation));
 
 	_capsuleLerpAmount += CapsuleSizeLerpRate * DeltaTime;
 	if (_capsuleLerpAmount > 1)
 	{
 		GetCapsuleComponent()->SetCapsuleHalfHeight(_capsuleHeight.X);
 		GetCapsuleComponent()->SetCapsuleRadius(_capsuleRadius.X);
-		GetMesh()->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, _meshLocation.X));
+		PlayerMesh->SetRelativeLocation(FVector(meshRelativeLocation.X, meshRelativeLocation.Y, _meshLocation.X));
 	}
 }
 
@@ -1146,7 +1181,7 @@ bool ATPPlayer::HandleWallClimb()
 	const FVector heightLocation = _heightTrace.Location;
 
 	const FVector hitLocation = _heightTrace.Location;
-	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
+	const FVector socketLocation = PlayerMesh->GetSocketLocation("pelvisSocket");
 	const float difference = socketLocation.Z - hitLocation.Z;
 
 	// GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Climb Height: " + FString::SanitizeFloat(difference));
@@ -1170,6 +1205,7 @@ bool ATPPlayer::HandleWallClimb()
 		const FVector delta = FVector(newPosition.X, newPosition.Y, heightLocation.Z - ClimbAnimZOffset);
 
 		N_IsClimbing = true;
+		_climbVaultAnimCompleteCalled = false;
 		PlayerClimbNotify(targetRotation, delta);
 
 		return true;
@@ -1186,7 +1222,7 @@ bool ATPPlayer::HandleVault()
 	const FVector heightLocation = _heightTrace.Location;
 
 	const FVector hitLocation = _heightTrace.Location;
-	const FVector socketLocation = GetMesh()->GetSocketLocation("pelvisSocket");
+	const FVector socketLocation = PlayerMesh->GetSocketLocation("pelvisSocket");
 	const float difference = socketLocation.Z - hitLocation.Z;
 
 	// GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Vault Height: " + FString::SanitizeFloat(difference));
@@ -1210,6 +1246,7 @@ bool ATPPlayer::HandleVault()
 		const FVector delta = FVector(newPosition.X, newPosition.Y, heightLocation.Z - VaultAnimZOffset);
 
 		N_IsClimbing = true;
+		_climbVaultAnimCompleteCalled = false;
 		PlayerVaultNotify(targetRotation, delta);
 
 		return true;
@@ -1252,6 +1289,12 @@ bool ATPPlayer::CheckAndActivateWallClimb()
 
 void ATPPlayer::HandleClimbAnimComplete()
 {
+	if (_climbVaultAnimCompleteCalled)
+	{
+		return;
+	}
+	_climbVaultAnimCompleteCalled = true;
+
 	N_IsClimbing = false;
 
 	if (_preVJMovementState == EPlayerMovementState::Run)
@@ -1269,7 +1312,7 @@ void ATPPlayer::HandleVaultAnimMoveForwardComplete()
 	const FVector forwardVector = GetActorForwardVector();
 	const FRotator rotation = UKismetMathLibrary::MakeRotFromX(forwardVector);
 	SetActorRotation(FRotator(0, rotation.Yaw, 0));
-	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
+	PlayerMesh->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
 	_updateVaultForward = true;
 
 	float vaultDownDistance = _forwardHeightTrace.Location.Z - _heightTrace.Location.Z;
@@ -1288,9 +1331,17 @@ void ATPPlayer::HandleVaultAnimMoveForwardComplete()
 
 void ATPPlayer::HandleVaultAnimComplete()
 {
+	if (_climbVaultAnimCompleteCalled)
+	{
+		return;
+	}
+	_climbVaultAnimCompleteCalled = true;
+
+	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Hello World");
+
 	N_IsClimbing = false;
 	_updateVaultForward = false;
-	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
+	PlayerMesh->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
 
 	if (_preVJMovementState == EPlayerMovementState::Run)
 	{
@@ -1421,16 +1472,6 @@ void ATPPlayer::UpdateRecoilCamera(const float DeltaTime)
 	const FVector2D diff = nextInputAmount - currentInputAmount;
 	AddControllerPitchInput(diff.Y * RecoilCameraMultiplier);
 	AddControllerYawInput(diff.X * RecoilCameraMultiplier);
-
-	const FRotator controlRotation = GetControlRotation();
-	if (!HasAuthority())
-	{
-		Server_LookUpControlRotation(controlRotation);
-	}
-	else
-	{
-		Remote_LookUpControlRotation(controlRotation);
-	}
 
 	if (_recoilLerpAmount >= 1)
 	{
