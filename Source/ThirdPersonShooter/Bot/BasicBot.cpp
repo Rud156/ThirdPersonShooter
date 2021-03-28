@@ -6,8 +6,9 @@
 #include "../UI/UI_DamageDisplay.h"
 
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
 
-ABasicBot::ABasicBot()
+ABasicBot::ABasicBot(const class FObjectInitializer& PCIP) : Super(PCIP)
 {
 	HealthAndDamage = CreateDefaultSubobject<UHealthAndDamageComponent>(TEXT("HealthAndDamage"));
 	DamageWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("DamageWidget"));
@@ -22,11 +23,11 @@ void ABasicBot::BeginPlay()
 
 	_damageUI = Cast<UUI_DamageDisplay>(DamageWidget->GetUserWidgetObject());
 
-	_currentBulletCount = 0;
-	_currentDamageTaken = 0;
+	N_CurrentBulletCount = 0;
+	N_CurrentDamageTaken = 0;
 
-	_damageUI->SetBulletsHit(_currentBulletCount);
-	_damageUI->SetDamageDone(_currentDamageTaken);
+	_damageUI->SetBulletsHit(N_CurrentBulletCount);
+	_damageUI->SetDamageDone(N_CurrentDamageTaken);
 }
 
 void ABasicBot::Tick(float DeltaTime)
@@ -38,11 +39,11 @@ void ABasicBot::Tick(float DeltaTime)
 		_resetTimer -= DeltaTime;
 		if (_resetTimer <= 0)
 		{
-			_currentBulletCount = 0;
-			_currentDamageTaken = 0;
+			N_CurrentBulletCount = 0;
+			N_CurrentDamageTaken = 0;
 
-			_damageUI->SetBulletsHit(_currentBulletCount);
-			_damageUI->SetDamageDone(_currentDamageTaken);
+			_damageUI->SetBulletsHit(N_CurrentBulletCount);
+			_damageUI->SetDamageDone(N_CurrentDamageTaken);
 		}
 	}
 }
@@ -55,9 +56,23 @@ void ABasicBot::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 void ABasicBot::HandleDamageTaken(int DamageAmount)
 {
 	_resetTimer = DataResetDelay;
-	_currentBulletCount += 1;
-	_currentDamageTaken += DamageAmount;
+	N_CurrentBulletCount += 1;
+	N_CurrentDamageTaken += DamageAmount;
 
-	_damageUI->SetBulletsHit(_currentBulletCount);
-	_damageUI->SetDamageDone(_currentDamageTaken);
+	_damageUI->SetBulletsHit(N_CurrentBulletCount);
+	_damageUI->SetDamageDone(N_CurrentDamageTaken);
+}
+
+void ABasicBot::OnDataFromNetwork() const
+{
+	_damageUI->SetBulletsHit(N_CurrentBulletCount);
+	_damageUI->SetDamageDone(N_CurrentDamageTaken);
+}
+
+void ABasicBot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABasicBot, N_CurrentBulletCount);
+	DOREPLIFETIME(ABasicBot, N_CurrentDamageTaken);
 }
