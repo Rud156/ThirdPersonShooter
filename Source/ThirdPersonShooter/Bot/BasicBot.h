@@ -15,43 +15,11 @@ class THIRDPERSONSHOOTER_API ABasicBot : public ACharacter
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* DamageWidget;
+	class UDamageBulletDisplayComponent* DamageBulletDisplay;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class UHealthAndDamageComponent* HealthAndDamage;
 
-	UUI_DamageDisplay* _damageUI;
-
-	float _resetTimer;
-	
-	UFUNCTION()
-	void HandleDamageTaken(int DamageAmount);
-
-protected:
-	virtual void BeginPlay() override;
-
 public:
-#pragma region Networked Data
-
-	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
-	int N_CurrentBulletCount;
-
-	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
-	int N_CurrentDamageTaken;
-
-	UFUNCTION()
-	void OnDataFromNetwork() const;
-
-#pragma endregion
-	
-#pragma region Properties
-
-	UPROPERTY(Category="Bot|Data", EditAnywhere)
-	float DataResetDelay;
-
-#pragma endregion
-
 	ABasicBot(const class FObjectInitializer& PCIP);
-	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 };

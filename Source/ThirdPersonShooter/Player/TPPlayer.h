@@ -34,6 +34,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class UHealthAndDamageComponent* HealthAndDamage;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	class UDamageBulletDisplayComponent* DamageBulletDisplay;
+
 	float _horizontalInput;
 	float _verticalInput;
 

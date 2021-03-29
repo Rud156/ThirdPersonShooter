@@ -4,6 +4,7 @@
 #include "./CustomPlayerMovement.h"
 #include "../CustomCompoenents/Health/HealthAndDamageComponent.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
+#include "../CustomCompoenents/Misc/DamageBulletDisplayComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
 
 #include "Camera/CameraComponent.h"
@@ -52,6 +53,9 @@ ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP.SetDefau
 
 	InteractCastPoint = CreateDefaultSubobject<USceneComponent>(TEXT("InteractCastPoint"));
 	InteractCastPoint->SetupAttachment(FollowCamera);
+
+	DamageBulletDisplay = CreateDefaultSubobject<UDamageBulletDisplayComponent>(TEXT("DamageBulletDisplay"));
+	DamageBulletDisplay->SetupAttachment(RootComponent);
 
 	HealthAndDamage = CreateDefaultSubobject<UHealthAndDamageComponent>(TEXT("HealthAndDamage"));
 
