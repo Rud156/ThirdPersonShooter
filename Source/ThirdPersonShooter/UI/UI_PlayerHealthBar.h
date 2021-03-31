@@ -31,10 +31,10 @@ public:
 	FLinearColor MinHealthColor;
 
 	UPROPERTY(Category="Color", EditAnywhere)
-	FLinearColor HalfHealthColor;
+	FLinearColor MaxHealthColor;
 
 	UPROPERTY(Category="Color", EditAnywhere)
-	FLinearColor FullHealthColor;
+	float MinHealthPercent;
 
 #pragma endregion
 

@@ -202,6 +202,35 @@ int ABaseShootingWeapon::GetCurrentBulletCount() const
 	return _bulletsShot;
 }
 
+int ABaseShootingWeapon::GetDamageForBone(const FString BoneName) const
+{
+	for (int i = 0; i < BodyBonesName.Num(); i++)
+	{
+		if (BoneName == BodyBonesName[i])
+		{
+			return BodyDamageAmount;
+		}
+	}
+
+	for (int i = 0; i < HeadBonesName.Num(); i++)
+	{
+		if (BoneName == HeadBonesName[i])
+		{
+			return HeadDamageAmount;
+		}
+	}
+
+	for (int i = 0; i < LegBonesName.Num(); i++)
+	{
+		if (BoneName == LegBonesName[i])
+		{
+			return LegDamageAmount;
+		}
+	}
+
+	return 0;
+}
+
 USkeletalMeshComponent* ABaseShootingWeapon::GetMesh() const
 {
 	return WeaponMesh;

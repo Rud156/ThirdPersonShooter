@@ -51,15 +51,30 @@ public:
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	UCurveFloat* RecoilResetLerpSpeed;
-	
+
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	float RecoilShootLerpSpeed;
 
 	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
 	UCurveFloat* RecoilLerpCurve;
 
-	UPROPERTY(Category="Weapon|Shoot", EditAnywhere)
-	int DamageAmount;
+	UPROPERTY(Category="Weapon|Damage", EditAnywhere)
+	int BodyDamageAmount;
+
+	UPROPERTY(Category="Weapon|Damage", EditAnywhere)
+	TArray<FString> BodyBonesName;
+
+	UPROPERTY(Category="Weapon|Damage", EditAnywhere)
+	int HeadDamageAmount;
+
+	UPROPERTY(Category="Weapon|Damage", EditAnywhere)
+	TArray<FString> HeadBonesName;
+
+	UPROPERTY(Category="Weapon|Damage", EditAnywhere)
+	int LegDamageAmount;
+
+	UPROPERTY(Category="Weapon|Damage", EditAnywhere)
+	TArray<FString> LegBonesName;
 
 #pragma region Reocil
 
@@ -142,11 +157,12 @@ public:
 
 	void PickupWeapon();
 	void DropWeapon();
-	
+
 	void ShowWeapon() const;
 	void HideWeapon() const;
 
 	int GetCurrentBulletCount() const;
+	int GetDamageForBone(const FString BoneName) const;
 
 	ABaseShootingWeapon(const class FObjectInitializer& PCIP);
 	virtual void Tick(float DeltaSeconds) override;

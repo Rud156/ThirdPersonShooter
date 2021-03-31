@@ -1657,27 +1657,30 @@ void ATPPlayer::BulletShot(const FVector StartPosition, const FVector EndPositio
 		sphereLocation = hitResult.Location;
 		if (HasAuthority())
 		{
-			CheckAndDealDamage(hitResult.GetActor());
+			CheckAndDealDamage(hitResult.GetActor(), hitResult.BoneName.ToString());
 		}
 	}
 
 	DrawDebugSphere(GetWorld(), sphereLocation, 5, 16, FColor::Red, false, 1);
 }
 
-void ATPPlayer::CheckAndDealDamage(AActor* HitActor) const
+void ATPPlayer::CheckAndDealDamage(AActor* HitActor, const FString BoneName) const
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
 
-	UActorComponent* healthActorComp = HitActor->GetComponentByClass(UHealthAndDamageComponent::StaticClass());
-	if (healthActorComp != nullptr)
+	if (HitActor != nullptr)
 	{
-		UHealthAndDamageComponent* healthAndDamageComponent = Cast<UHealthAndDamageComponent>(healthActorComp);
+		UActorComponent* healthActorComp = HitActor->GetComponentByClass(UHealthAndDamageComponent::StaticClass());
+		if (healthActorComp != nullptr)
+		{
+			UHealthAndDamageComponent* healthAndDamageComponent = Cast<UHealthAndDamageComponent>(healthActorComp);
 
-		const int damageAmount = N_CurrentWeapon->DamageAmount;
-		healthAndDamageComponent->TakeDamage(damageAmount);
+			const int damageAmount = N_CurrentWeapon->GetDamageForBone(BoneName);
+			healthAndDamageComponent->TakeDamage(damageAmount);
+		}
 	}
 }
 

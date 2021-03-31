@@ -114,7 +114,7 @@ private:
 	void UpdateRecoilCamera(const float DeltaTime);
 	void UpdateFirePressed(const float DeltaTime);
 	void BulletShot(const FVector StartPosition, const FVector EndPosition) const;
-	void CheckAndDealDamage(AActor* HitActor) const;
+	void CheckAndDealDamage(AActor* HitActor, const FString BoneName) const;
 	void ClearRecoilData();
 
 	bool CanAcceptShootingInput() const;
