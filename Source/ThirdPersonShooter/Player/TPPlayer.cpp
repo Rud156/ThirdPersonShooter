@@ -117,7 +117,7 @@ void ATPPlayer::HandlePlayerDied(AActor* Unit)
 		TArray<AActor*> playerStartPositions;
 		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), playerStartPositions);
 
-		const int randomIndex = FMath::RandRange(0, playerStartPositions.Num());
+		const int randomIndex = FMath::RandRange(0, playerStartPositions.Num() - 1);
 		const FVector spawnLocation = playerStartPositions[randomIndex]->GetActorLocation();
 
 		SetActorLocation(spawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
