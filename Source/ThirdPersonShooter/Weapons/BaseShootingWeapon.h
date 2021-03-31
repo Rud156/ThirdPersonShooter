@@ -142,6 +142,9 @@ public:
 
 	void PickupWeapon();
 	void DropWeapon();
+	
+	void ShowWeapon() const;
+	void HideWeapon() const;
 
 	int GetCurrentBulletCount() const;
 

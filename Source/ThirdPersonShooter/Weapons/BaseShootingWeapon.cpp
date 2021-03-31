@@ -187,6 +187,16 @@ void ABaseShootingWeapon::DropWeapon()
 	SetReplicateMovement(true);
 }
 
+void ABaseShootingWeapon::ShowWeapon() const
+{
+	WeaponMesh->SetHiddenInGame(false);
+}
+
+void ABaseShootingWeapon::HideWeapon() const
+{
+	WeaponMesh->SetHiddenInGame(true);
+}
+
 int ABaseShootingWeapon::GetCurrentBulletCount() const
 {
 	return _bulletsShot;

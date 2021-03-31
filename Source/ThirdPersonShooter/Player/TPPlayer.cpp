@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "./TPPlayer.h"
+#include "../Utils/Structs.h"
 #include "./CustomPlayerMovement.h"
 #include "../CustomCompoenents/Health/HealthAndDamageComponent.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
@@ -11,7 +12,6 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "GameFramework/Controller.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -86,7 +86,10 @@ void ATPPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	UpdateLookRotation(DeltaTime);
+	SendLookRotationToServer();
+	SendPlayerInputsToServer();
+	UpdateMovementServerRemote();
+
 	UpdateCapsuleSize(DeltaTime);
 	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
@@ -109,14 +112,11 @@ void ATPPlayer::MoveForward(const float Value)
 
 	if (Value != 0.0f)
 	{
-		if (IsLocallyControlled() || HasAuthority())
-		{
-			const FRotator rotation = GetControlRotation();
-			const FRotator yawRotation(0, rotation.Yaw, 0);
+		const FRotator rotation = GetControlRotation();
+		const FRotator yawRotation(0, rotation.Yaw, 0);
 
-			const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::X);
-			AddMovementInput(direction, Value);
-		}
+		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::X);
+		AddMovementInput(direction, Value);
 	}
 
 	if (GetTopPlayerState() == EPlayerMovementState::Run)
@@ -130,35 +130,6 @@ void ATPPlayer::MoveForward(const float Value)
 	}
 }
 
-void ATPPlayer::Client_MoveForward(const float Value)
-{
-	MoveForward(Value);
-	if (!HasAuthority())
-	{
-		Server_MoveForward(Value);
-	}
-	else
-	{
-		Remote_MoveForward(Value);
-	}
-}
-
-void ATPPlayer::Server_MoveForward_Implementation(const float Value)
-{
-	MoveForward(Value);
-	Remote_MoveForward(Value);
-}
-
-void ATPPlayer::Remote_MoveForward_Implementation(const float Value)
-{
-	if (IsLocallyControlled() || HasAuthority())
-	{
-		return;
-	}
-
-	MoveForward(Value);
-}
-
 void ATPPlayer::MoveRight(const float Value)
 {
 	_horizontalInput = Value;
@@ -169,44 +140,97 @@ void ATPPlayer::MoveRight(const float Value)
 
 	if (Value != 0.0f)
 	{
-		if (IsLocallyControlled() || HasAuthority())
-		{
-			const FRotator rotation = GetControlRotation();
-			const FRotator yawRotation(0, rotation.Yaw, 0);
+		const FRotator rotation = GetControlRotation();
+		const FRotator yawRotation(0, rotation.Yaw, 0);
 
-			const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::Y);
-			AddMovementInput(direction, Value);
+		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::Y);
+		AddMovementInput(direction, Value);
+	}
+}
+
+void ATPPlayer::UpdateMovementServerRemote()
+{
+	if (IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (!CanAcceptPlayerInput())
+	{
+		return;
+	}
+
+	// Vertical
+	if (_verticalInput != 0.0f)
+	{
+		const FRotator rotation = GetControlRotation();
+		const FRotator yawRotation(0, rotation.Yaw, 0);
+
+		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::X);
+		AddMovementInput(direction, _verticalInput);
+	}
+	if (GetTopPlayerState() == EPlayerMovementState::Run)
+	{
+		if (_verticalInput != 1)
+		{
+			ResetPreRunRotation();
+			RemovePlayerMovementState(EPlayerMovementState::Run);
+			ApplyChangesToCharacter();
 		}
 	}
+
+	// Horizontal
+	if (_horizontalInput != 0.0f)
+	{
+		const FRotator rotation = GetControlRotation();
+		const FRotator yawRotation(0, rotation.Yaw, 0);
+
+		const FVector direction = FRotationMatrix(yawRotation).GetUnitAxis(EAxis::Y);
+		AddMovementInput(direction, _horizontalInput);
+	}
+}
+
+void ATPPlayer::Client_MoveForward(const float Value)
+{
+	MoveForward(Value);
 }
 
 void ATPPlayer::Client_MoveRight(const float Value)
 {
 	MoveRight(Value);
-	if (!HasAuthority())
-	{
-		Server_MoveRight(Value);
-	}
-	else
-	{
-		Remote_MoveRight(Value);
-	}
 }
 
-void ATPPlayer::Server_MoveRight_Implementation(const float Value)
+void ATPPlayer::SendPlayerInputsToServer()
 {
-	MoveRight(Value);
-	Remote_MoveRight(Value);
-}
-
-void ATPPlayer::Remote_MoveRight_Implementation(const float Value)
-{
-	if (IsLocallyControlled() || HasAuthority())
+	if (!IsLocallyControlled())
 	{
 		return;
 	}
 
-	MoveRight(Value);
+	if (!HasAuthority())
+	{
+		Server_ReceiveInput(_verticalInput, _horizontalInput);
+	}
+	else
+	{
+		Remote_ReceiveInput(_verticalInput, _horizontalInput);
+	}
+}
+
+void ATPPlayer::Server_ReceiveInput_Implementation(const float Vertical, const float Horizontal)
+{
+	Remote_ReceiveInput(Vertical, Horizontal);
+}
+
+void ATPPlayer::Remote_ReceiveInput_Implementation(const float Vertical, const float Horizontal)
+{
+	if (IsLocallyControlled())
+	{
+		return;
+	}
+
+	_verticalInput = Vertical;
+	_horizontalInput = Horizontal;
 }
 
 void ATPPlayer::LookUpRate(const float Value)
@@ -219,7 +243,7 @@ void ATPPlayer::LookUpRate(const float Value)
 	}
 }
 
-void ATPPlayer::UpdateLookRotation(const float DeltaTime)
+void ATPPlayer::SendLookRotationToServer()
 {
 	if (IsLocallyControlled())
 	{
@@ -501,14 +525,15 @@ void ATPPlayer::UpdateRunMeshRotation(const float DeltaTime)
 		else
 		{
 			_runStartRotation = PlayerMesh->GetRelativeRotation();
-			_runEndRotation = FRotator(0, DefaultMeshZPosition, 0);
+			_runEndRotation = FRotator(0, MeshDefaultZRotation, 0);
 			_runLerpAmount = 0;
 		}
 	}
 
+	// This will only happen if the player is not running to reset default rotation
 	if (_runLerpAmount >= 1)
 	{
-		PlayerMesh->SetRelativeRotation(_runEndRotation);
+		PlayerMesh->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
 	}
 }
 
@@ -522,7 +547,9 @@ void ATPPlayer::ResetPreRunRotation(const bool ForceReset)
 	}
 	else
 	{
-		PlayerMesh->SetRelativeRotation(FRotator(0, MeshDefaultZRotation, 0));
+		_runStartRotation = PlayerMesh->GetRelativeRotation();
+		_runEndRotation = FRotator(0, MeshDefaultZRotation, 0);
+		PlayerMesh->SetRelativeRotation(_runEndRotation);
 	}
 }
 
@@ -721,6 +748,11 @@ void ATPPlayer::HandleDivePressed()
 	_acceptDiveInput = false;
 	bUseControllerRotationYaw = false;
 
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->HideWeapon();
+	}
+
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
 
@@ -812,6 +844,11 @@ void ATPPlayer::HandleDiveAnimComplete()
 		_runStartRotation = FRotator(0, MeshDefaultZRotation, 0);
 		_runEndRotation = _runStartRotation;
 		_runLerpAmount = 0;
+	}
+
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->ShowWeapon();
 	}
 }
 
@@ -1210,6 +1247,11 @@ bool ATPPlayer::HandleWallClimb()
 
 		N_IsClimbing = true;
 		_climbVaultAnimCompleteCalled = false;
+
+		if (N_CurrentWeapon != nullptr)
+		{
+			N_CurrentWeapon->HideWeapon();
+		}
 		PlayerClimbNotify(targetRotation, delta);
 
 		return true;
@@ -1251,6 +1293,11 @@ bool ATPPlayer::HandleVault()
 
 		N_IsClimbing = true;
 		_climbVaultAnimCompleteCalled = false;
+
+		if (N_CurrentWeapon != nullptr)
+		{
+			N_CurrentWeapon->HideWeapon();
+		}
 		PlayerVaultNotify(targetRotation, delta);
 
 		return true;
@@ -1298,8 +1345,12 @@ void ATPPlayer::HandleClimbAnimComplete()
 		return;
 	}
 	_climbVaultAnimCompleteCalled = true;
-
 	N_IsClimbing = false;
+
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->ShowWeapon();
+	}
 
 	if (_preVJMovementState == EPlayerMovementState::Run)
 	{
@@ -1340,12 +1391,14 @@ void ATPPlayer::HandleVaultAnimComplete()
 		return;
 	}
 	_climbVaultAnimCompleteCalled = true;
-
-	GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Hello World");
-
 	N_IsClimbing = false;
 	_updateVaultForward = false;
 	PlayerMesh->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
+
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->ShowWeapon();
+	}
 
 	if (_preVJMovementState == EPlayerMovementState::Run)
 	{

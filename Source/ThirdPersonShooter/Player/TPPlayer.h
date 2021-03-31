@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "../Utils/Enums.h"
-#include "../Utils/Structs.h"
 #include "TPPlayer.generated.h"
 
 class ABaseShootingWeapon;
@@ -39,8 +38,10 @@ private:
 
 	float _horizontalInput;
 	float _verticalInput;
-
-	void UpdateLookRotation(const float DeltaTime);
+	void SendPlayerInputsToServer();
+	void UpdateMovementServerRemote();
+	
+	void SendLookRotationToServer();
 	void SetCameraBoomPitchRotation(const FRotator ControlRotation) const;
 
 	void PushPlayerMovementState(const EPlayerMovementState MovementState);
@@ -317,17 +318,13 @@ public:
 
 	void MoveForward(const float Value);
 	void Client_MoveForward(const float Value);
-	UFUNCTION(Server, Unreliable)
-	void Server_MoveForward(const float Value);
-	UFUNCTION(NetMulticast, Unreliable)
-	void Remote_MoveForward(const float Value);
-
 	void MoveRight(const float Value);
 	void Client_MoveRight(const float Value);
+
 	UFUNCTION(Server, Unreliable)
-	void Server_MoveRight(const float Value);
+	void Server_ReceiveInput(const float Vertical, const float Horizontal);
 	UFUNCTION(NetMulticast, Unreliable)
-	void Remote_MoveRight(const float Value);
+	void Remote_ReceiveInput(const float Vertical, const float Horizontal);
 
 	void TurnAtRate(const float Value);
 	void Client_TurnAtRate(const float Value);
