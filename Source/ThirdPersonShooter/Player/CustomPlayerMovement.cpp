@@ -23,8 +23,8 @@ FNetworkPredictionData_Client* UCustomPlayerMovement::GetPredictionData_Client()
 		UCustomPlayerMovement* MutableThis = const_cast<UCustomPlayerMovement*>(this);
 
 		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_CustomMovement(*this);
-		MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 92.f;
-		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 140.f;
+		MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 200.0f;
+		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 400.0f;
 	}
 
 	return ClientPredictionData;
