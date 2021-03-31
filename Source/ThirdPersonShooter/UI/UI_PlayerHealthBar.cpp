@@ -14,7 +14,7 @@ void UUI_PlayerHealthBar::SetHealthRatio(const int CurrentHealth, const int MaxH
 	MaxHealthText->SetText(FText::FromString(maxHealthString));
 
 	const float ratio = static_cast<float>(CurrentHealth) / static_cast<float>(MaxHealth);
-	HealthProgress->Percent = ratio;
+	HealthProgress->SetPercent(ratio);
 
 	if (ratio <= MinHealthPercent)
 	{

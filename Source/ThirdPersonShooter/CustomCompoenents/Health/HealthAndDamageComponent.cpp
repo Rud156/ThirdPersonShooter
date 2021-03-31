@@ -44,6 +44,7 @@ void UHealthAndDamageComponent::Server_TakeDamage_Implementation(const int Damag
 
 	if (N_CurrentHealth <= 0)
 	{
+		N_CurrentHealth = N_MaxHealth;
 		OnUnitDied.Broadcast(GetOwner());
 	}
 }
@@ -81,6 +82,11 @@ void UHealthAndDamageComponent::AddHealth(const int HealthAmount)
 void UHealthAndDamageComponent::TakeDamage(const int DamageAmount)
 {
 	Server_TakeDamage(DamageAmount);
+}
+
+void UHealthAndDamageComponent::OnDataFromNetwork()
+{
+	OnDataFromServer.Broadcast();
 }
 
 int UHealthAndDamageComponent::GetCurrentHealth()

@@ -39,6 +39,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UDefaultWeaponComponent* DefaultWeaponComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	class UHealthDisplayComponent* HealthDisplayComp;
+
 	float _horizontalInput;
 	float _verticalInput;
 	void SendPlayerInputsToServer();

@@ -12,6 +12,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHealthChanged, int, NewHealth);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDamageTaken, int, DamageAmount);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDataFromServer);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class THIRDPERSONSHOOTER_API UHealthAndDamageComponent : public UActorComponent
 {
@@ -23,7 +25,7 @@ protected:
 public:
 #pragma region Networked Data
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
 	int N_CurrentHealth;
 
 	UPROPERTY(Category="Health", BlueprintReadOnly, EditAnywhere, Replicated)
@@ -37,6 +39,12 @@ public:
 
 	UPROPERTY(Category="Delegates", BlueprintAssignable)
 	FDamageTaken OnDamageTaken;
+
+	UPROPERTY(Category="Delegates", BlueprintAssignable)
+	FDataFromServer OnDataFromServer;
+
+	UFUNCTION()
+	void OnDataFromNetwork();
 
 #pragma endregion
 
