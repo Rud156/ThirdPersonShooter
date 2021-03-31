@@ -17,6 +17,9 @@ class THIRDPERSONSHOOTER_API UHealthDisplayComponent : public UActorComponent
 private:
 	UFUNCTION()
 	void HandleDataFromServer();
+
+	UFUNCTION()
+	void HandleHealthChanged(int NewHealth);
 	
 	ABasic_UMG_Creator* _basicUMGCreator;
 	UHealthAndDamageComponent* _healthComponent;

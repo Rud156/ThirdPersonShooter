@@ -54,15 +54,16 @@ public:
 	int GetCurrentHealth();
 
 	void SetMaxHealth(const int HealthAmount, const bool ResetCurrentHealth = true);
+	void SetHealth(const int HealthAmount);
 	void AddHealth(const int HealthAmount);
 	void TakeDamage(const int DamageAmount);
 
 	UFUNCTION(Server, Reliable)
 	void Server_TakeDamage(const int DamageAmount);
-
 	UFUNCTION(Server, Reliable)
 	void Server_AddHealth(const int HealthAmount);
-
 	UFUNCTION(Server, Reliable)
 	void Server_SetMaxHealth(const int HealthAmount, const bool ResetCurrentHealth = true);
+	UFUNCTION(Server, Reliable)
+	void Server_SetHealth(const int HealthAmount);
 };

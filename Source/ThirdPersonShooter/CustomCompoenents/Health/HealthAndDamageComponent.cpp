@@ -45,7 +45,6 @@ void UHealthAndDamageComponent::Server_TakeDamage_Implementation(const int Damag
 	if (N_CurrentHealth <= 0)
 	{
 		OnUnitDied.Broadcast(GetOwner());
-		N_CurrentHealth = N_MaxHealth;
 	}
 }
 
@@ -69,9 +68,25 @@ void UHealthAndDamageComponent::Server_SetMaxHealth_Implementation(const int Hea
 	}
 }
 
+void UHealthAndDamageComponent::Server_SetHealth_Implementation(const int HealthAmount)
+{
+	N_CurrentHealth = HealthAmount;
+	if (N_CurrentHealth > N_MaxHealth)
+	{
+		N_CurrentHealth = N_MaxHealth;
+	}
+
+	OnHealthChanged.Broadcast(N_CurrentHealth);
+}
+
 void UHealthAndDamageComponent::SetMaxHealth(const int HealthAmount, const bool ResetCurrentHealth)
 {
 	Server_SetMaxHealth(HealthAmount, ResetCurrentHealth);
+}
+
+void UHealthAndDamageComponent::SetHealth(const int HealthAmount)
+{
+	Server_SetHealth(HealthAmount);
 }
 
 void UHealthAndDamageComponent::AddHealth(const int HealthAmount)

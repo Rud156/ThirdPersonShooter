@@ -21,7 +21,6 @@ void ABasic_UMG_Creator::BeginPlay()
 	Super::BeginPlay();
 
 	const auto playerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-
 	if (playerController != nullptr)
 	{
 		auto crossHair = CreateWidget<UUI_CrossHair>(playerController, CrossHairPrefab);

@@ -28,6 +28,7 @@ void UHealthDisplayComponent::BeginPlay()
 	if (healthDmgComponent != nullptr)
 	{
 		_healthComponent = Cast<UHealthAndDamageComponent>(healthDmgComponent);
+		_healthComponent->OnHealthChanged.AddDynamic(this, &UHealthDisplayComponent::HandleHealthChanged);
 		_healthComponent->OnDataFromServer.AddDynamic(this, &UHealthDisplayComponent::HandleDataFromServer);
 	}
 }
@@ -38,6 +39,18 @@ void UHealthDisplayComponent::HandleDataFromServer()
 	if (_basicUMGCreator != nullptr && player->IsLocallyControlled())
 	{
 		const int currentHealth = _healthComponent->GetCurrentHealth();
+		const int maxHealth = _healthComponent->N_MaxHealth;
+
+		_basicUMGCreator->GetPlayerHealthWidget()->SetHealthRatio(currentHealth, maxHealth);
+	}
+}
+
+void UHealthDisplayComponent::HandleHealthChanged(int NewHealth)
+{
+		ATPPlayer* player = Cast<ATPPlayer>(GetOwner());
+	if (_basicUMGCreator != nullptr && player->IsLocallyControlled())
+	{
+		const int currentHealth = NewHealth;
 		const int maxHealth = _healthComponent->N_MaxHealth;
 
 		_basicUMGCreator->GetPlayerHealthWidget()->SetHealthRatio(currentHealth, maxHealth);

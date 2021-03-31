@@ -121,6 +121,7 @@ void ATPPlayer::HandlePlayerDied(AActor* Unit)
 		const FVector spawnLocation = playerStartPositions[randomIndex]->GetActorLocation();
 
 		SetActorLocation(spawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
+		HealthAndDamage->SetHealth(HealthAndDamage->N_MaxHealth);
 	}
 }
 
