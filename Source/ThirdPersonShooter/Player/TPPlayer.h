@@ -30,11 +30,14 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* InteractCastPoint;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UHealthAndDamageComponent* HealthAndDamage;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UDamageBulletDisplayComponent* DamageBulletDisplay;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	class UDefaultWeaponComponent* DefaultWeaponComp;
 
 	float _horizontalInput;
 	float _verticalInput;
@@ -112,8 +115,6 @@ private:
 	void UpdateFirePressed(const float DeltaTime);
 	void BulletShot(const FVector StartPosition, const FVector EndPosition) const;
 	void CheckAndDealDamage(AActor* HitActor) const;
-	void PickupWeapon(ABaseShootingWeapon* Weapon);
-	void DropWeapon(ABaseShootingWeapon* Weapon);
 	void ClearRecoilData();
 
 	bool CanAcceptShootingInput() const;
@@ -421,6 +422,9 @@ public:
 
 	ATPPlayer(const class FObjectInitializer& PCIP);
 	virtual void Tick(float DeltaTime) override;
+
+	void PickupWeapon(ABaseShootingWeapon* Weapon);
+	void DropWeapon(ABaseShootingWeapon* Weapon);
 
 	UFUNCTION()
 	void ResetPreRecoilCamera();

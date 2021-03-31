@@ -6,6 +6,7 @@
 #include "../CustomCompoenents/Health/HealthAndDamageComponent.h"
 #include "../CustomCompoenents/Misc/InteractionComponent.h"
 #include "../CustomCompoenents/Misc/DamageBulletDisplayComponent.h"
+#include "../CustomCompoenents/Misc/DefaultWeaponComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
 
 #include "Camera/CameraComponent.h"
@@ -58,6 +59,7 @@ ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP.SetDefau
 	DamageBulletDisplay->SetupAttachment(RootComponent);
 
 	HealthAndDamage = CreateDefaultSubobject<UHealthAndDamageComponent>(TEXT("HealthAndDamage"));
+	DefaultWeaponComp = CreateDefaultSubobject<UDefaultWeaponComponent>(TEXT("DefaultWeaponComp"));
 
 	PrimaryActorTick.bCanEverTick = true;
 }
