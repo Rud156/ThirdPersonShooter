@@ -44,8 +44,8 @@ void UHealthAndDamageComponent::Server_TakeDamage_Implementation(const int Damag
 
 	if (N_CurrentHealth <= 0)
 	{
-		N_CurrentHealth = N_MaxHealth;
 		OnUnitDied.Broadcast(GetOwner());
+		N_CurrentHealth = N_MaxHealth;
 	}
 }
 

@@ -42,6 +42,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UHealthDisplayComponent* HealthDisplayComp;
 
+	UFUNCTION()
+	void HandlePlayerDied(AActor* Unit);
+
 	float _horizontalInput;
 	float _verticalInput;
 	void SendPlayerInputsToServer();

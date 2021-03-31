@@ -14,10 +14,12 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/PlayerStart.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
@@ -70,6 +72,8 @@ void ATPPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
+	HealthAndDamage->OnUnitDied.AddDynamic(this, &ATPPlayer::HandlePlayerDied);
+
 	PushPlayerMovementState(EPlayerMovementState::Walk);
 	ApplyChangesToCharacter();
 	ClearRecoilData();
@@ -104,6 +108,20 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateFirePressed(DeltaTime);
 
 	CheckAndActivateWallClimb();
+}
+
+void ATPPlayer::HandlePlayerDied(AActor* Unit)
+{
+	if (HasAuthority())
+	{
+		TArray<AActor*> playerStartPositions;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), playerStartPositions);
+
+		const int randomIndex = FMath::RandRange(0, playerStartPositions.Num());
+		const FVector spawnLocation = playerStartPositions[randomIndex]->GetActorLocation();
+
+		SetActorLocation(spawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	}
 }
 
 void ATPPlayer::MoveForward(const float Value)
