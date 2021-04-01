@@ -61,6 +61,62 @@ AActor* ASpawnLocationsController::GetValidSpawnPoint() const
 		bestStart = preferredSpawns[FMath::RandHelper(preferredSpawns.Num())];
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Hello World"));
+	return bestStart;
+}
+
+AActor* ASpawnLocationsController::GetValidSpawnPointPlayer(AActor* Player) const
+{
+	TArray<APlayerStart*> preferredSpawns;
+
+	TArray<AActor*> playerStarts;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), playerStarts);
+
+	TArray<AActor*> players;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATPPlayer::StaticClass(), players);
+
+	if (players.Num() - 1 > 0)
+	{
+		FVector centerOfMass = FVector::ZeroVector;
+		for (int i = 0; i < players.Num(); i++)
+		{
+			if (players[i] == Player)
+			{
+				continue;
+			}
+
+			const FVector playerPosition = players[i]->GetActorLocation();
+			centerOfMass += playerPosition;
+		}
+		centerOfMass /= (players.Num() - 1);
+
+		float maxDistance = TNumericLimits<float>::Min();
+		AActor* farthestPlayerStart = nullptr;
+		for (int i = 0; i < playerStarts.Num(); i++)
+		{
+			const FVector location = playerStarts[i]->GetActorLocation();
+			const float distance = FVector::Dist(location, centerOfMass);
+
+			if (distance > maxDistance)
+			{
+				maxDistance = distance;
+				farthestPlayerStart = playerStarts[i];
+			}
+		}
+		preferredSpawns.Add(Cast<APlayerStart>(farthestPlayerStart));
+	}
+	else
+	{
+		for (int i = 0; i < playerStarts.Num(); i++)
+		{
+			preferredSpawns.Add(Cast<APlayerStart>(playerStarts[i]));
+		}
+	}
+
+	APlayerStart* bestStart = nullptr;
+	if (preferredSpawns.Num() > 0)
+	{
+		bestStart = preferredSpawns[FMath::RandHelper(preferredSpawns.Num())];
+	}
+
 	return bestStart;
 }

@@ -1792,7 +1792,7 @@ void ATPPlayer::UpdatePlayerDied(const float DeltaTime)
 			AActor* spawnControllerActor = UGameplayStatics::GetActorOfClass(GetWorld(), ASpawnLocationsController::StaticClass());
 			ASpawnLocationsController* spawnController = Cast<ASpawnLocationsController>(spawnControllerActor);
 
-			AActor* spawnLocationActor = spawnController->GetValidSpawnPoint();
+			AActor* spawnLocationActor = spawnController->GetValidSpawnPointPlayer(this);
 			const FVector spawnLocation = spawnLocationActor->GetActorLocation();
 			SetActorLocation(spawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
 

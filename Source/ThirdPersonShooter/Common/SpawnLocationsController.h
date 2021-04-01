@@ -15,5 +15,7 @@ class THIRDPERSONSHOOTER_API ASpawnLocationsController : public AActor
 
 public:
 	ASpawnLocationsController();
+	
 	AActor* GetValidSpawnPoint() const;
+	AActor* GetValidSpawnPointPlayer(AActor* Player) const;
 };
