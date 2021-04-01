@@ -30,6 +30,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* InteractCastPoint;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	class USceneComponent* GunShootClearPoint;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UHealthAndDamageComponent* HealthAndDamage;
 
@@ -293,6 +296,9 @@ public:
 
 	UPROPERTY(Category="Player|Weapon", EditAnywhere)
 	float RecoilCameraMultiplier;
+
+	UPROPERTY(Category="Player|Weapon", EditAnywhere)
+	FName GunMuzzleSocketName;
 
 #pragma endregion
 

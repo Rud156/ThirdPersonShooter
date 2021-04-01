@@ -58,6 +58,9 @@ ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP.SetDefau
 	InteractCastPoint = CreateDefaultSubobject<USceneComponent>(TEXT("InteractCastPoint"));
 	InteractCastPoint->SetupAttachment(FollowCamera);
 
+	GunShootClearPoint = CreateDefaultSubobject<USceneComponent>(TEXT("GunShootClearPoint"));
+	GunShootClearPoint->SetupAttachment(FollowCamera);
+
 	DamageBulletDisplay = CreateDefaultSubobject<UDamageBulletDisplayComponent>(TEXT("DamageBulletDisplay"));
 	DamageBulletDisplay->SetupAttachment(RootComponent);
 
@@ -1598,7 +1601,8 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 		_recoilLerpSpeed = N_CurrentWeapon->RecoilShootLerpSpeed;
 		_resetRecoil = false;
 
-		const FVector startPosition = FollowCamera->GetComponentLocation();
+		// This is the final raycast that will get hit...
+		const FVector startPosition = InteractCastPoint->GetComponentLocation();
 		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
 			FollowCamera->GetUpVector() * recoilOffset.RayCastOffset.Y +
 			FollowCamera->GetRightVector() * recoilOffset.RayCastOffset.X;
@@ -1658,27 +1662,48 @@ void ATPPlayer::Remote_BulletShot_Implementation(const FVector StartPosition, co
 
 void ATPPlayer::BulletShot(const FVector StartPosition, const FVector EndPosition) const
 {
+	FVector sphereLocation = EndPosition;
 	if (N_CurrentWeapon != nullptr)
 	{
 		N_CurrentWeapon->PlayAudio();
 	}
 
-	DrawDebugLine(GetWorld(), StartPosition, EndPosition, FColor::Red, false, 1);
+	// Cast Initial Check
+	FCollisionQueryParams wallCheckCollisionParams;
+	wallCheckCollisionParams.AddIgnoredActor(this);
 
-	FCollisionQueryParams collisionParams;
-	collisionParams.AddIgnoredActor(this);
+	FVector wallCheckStartPosition = N_CurrentWeapon->GetMesh()->GetSocketLocation(GunMuzzleSocketName);
+	FVector wallCheckEndPosition = GunShootClearPoint->GetComponentLocation();
+	FHitResult wallCheckHitResult;
+	bool wallCheckHit = GetWorld()->LineTraceSingleByChannel(wallCheckHitResult, wallCheckStartPosition, wallCheckEndPosition, ECollisionChannel::ECC_Visibility,
+	                                                         wallCheckCollisionParams);
 
-	FHitResult hitResult;
-	bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, StartPosition, EndPosition, ECollisionChannel::ECC_Visibility, collisionParams);
-
-	FVector sphereLocation = EndPosition;
-
-	if (hit)
+	if (wallCheckHit)
 	{
-		sphereLocation = hitResult.Location;
+		DrawDebugLine(GetWorld(), wallCheckStartPosition, wallCheckEndPosition, FColor::Red, false, 1);
+		sphereLocation = wallCheckHitResult.Location;
 		if (HasAuthority())
 		{
-			CheckAndDealDamage(hitResult.GetActor(), hitResult.BoneName.ToString());
+			CheckAndDealDamage(wallCheckHitResult.GetActor(), wallCheckHitResult.BoneName.ToString());
+		}
+	}
+	else // If the First Line Trace does not hit it means LOS is clear. Shoot Normally
+	{
+		DrawDebugLine(GetWorld(), StartPosition, EndPosition, FColor::Red, false, 1);
+
+		FCollisionQueryParams collisionParams;
+		collisionParams.AddIgnoredActor(this);
+
+		FHitResult hitResult;
+		bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, StartPosition, EndPosition, ECollisionChannel::ECC_Visibility, collisionParams);
+
+		if (hit)
+		{
+			sphereLocation = hitResult.Location;
+			if (HasAuthority())
+			{
+				CheckAndDealDamage(hitResult.GetActor(), hitResult.BoneName.ToString());
+			}
 		}
 	}
 
