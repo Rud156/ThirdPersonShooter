@@ -9,6 +9,7 @@
 #include "../CustomCompoenents/Misc/DamageBulletDisplayComponent.h"
 #include "../CustomCompoenents/Misc/DefaultWeaponComponent.h"
 #include "../Weapons/BaseShootingWeapon.h"
+#include "../Common/SpawnLocationsController.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -101,6 +102,8 @@ void ATPPlayer::Tick(float DeltaTime)
 	SendPlayerInputsToServer();
 	UpdateMovementServerRemote();
 
+	UpdatePlayerDied(DeltaTime);
+
 	UpdateCapsuleSize(DeltaTime);
 	UpdateFalling(DeltaTime);
 	UpdateShoulderCamera(DeltaTime);
@@ -111,21 +114,6 @@ void ATPPlayer::Tick(float DeltaTime)
 	UpdateFirePressed(DeltaTime);
 
 	CheckAndActivateWallClimb();
-}
-
-void ATPPlayer::HandlePlayerDied(AActor* Unit)
-{
-	if (HasAuthority())
-	{
-		TArray<AActor*> playerStartPositions;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), playerStartPositions);
-
-		const int randomIndex = FMath::RandRange(0, playerStartPositions.Num() - 1);
-		const FVector spawnLocation = playerStartPositions[randomIndex]->GetActorLocation();
-
-		SetActorLocation(spawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
-		HealthAndDamage->SetHealth(HealthAndDamage->N_MaxHealth);
-	}
 }
 
 void ATPPlayer::MoveForward(const float Value)
@@ -294,6 +282,11 @@ void ATPPlayer::SetCameraBoomPitchRotation(const FRotator ControlRotation) const
 
 void ATPPlayer::Client_LookUpRate(const float Value)
 {
+	if (IsPlayerDead())
+	{
+		return;
+	}
+
 	LookUpRate(Value);
 }
 
@@ -327,6 +320,11 @@ void ATPPlayer::TurnAtRate(const float Value)
 
 void ATPPlayer::Client_TurnAtRate(const float Value)
 {
+	if (IsPlayerDead())
+	{
+		return;
+	}
+
 	TurnAtRate(Value);
 	if (!HasAuthority())
 	{
@@ -936,7 +934,7 @@ void ATPPlayer::Remote_HandleADSPressed_Implementation()
 
 bool ATPPlayer::CanAcceptADSInput() const
 {
-	if (_lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
+	if (N_IsPlayerDead || _lastFrameFalling || GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
 	{
 		return false;
 	}
@@ -1011,7 +1009,7 @@ void ATPPlayer::Server_HandleDropPressed_Implementation()
 
 bool ATPPlayer::CanAcceptPlayerInput() const
 {
-	if (GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
+	if (N_IsPlayerDead || GetTopPlayerState() == EPlayerMovementState::Dive || N_IsClimbing)
 	{
 		return false;
 	}
@@ -1766,9 +1764,74 @@ void ATPPlayer::DropWeapon(ABaseShootingWeapon* Weapon)
 	N_CurrentWeapon = nullptr;
 }
 
+void ATPPlayer::HandlePlayerDied(AActor* Unit)
+{
+	if (HasAuthority())
+	{
+		N_IsPlayerDead = true;
+		_respawnTimer = RespawnTimer;
+		HidePlayer();
+	}
+}
+
+void ATPPlayer::UpdatePlayerDied(const float DeltaTime)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (_respawnTimer > 0)
+	{
+		_respawnTimer -= DeltaTime;
+		if (_respawnTimer <= 0)
+		{
+			N_IsPlayerDead = false;
+			HealthAndDamage->SetHealth(HealthAndDamage->N_MaxHealth);
+
+			AActor* spawnControllerActor = UGameplayStatics::GetActorOfClass(GetWorld(), ASpawnLocationsController::StaticClass());
+			ASpawnLocationsController* spawnController = Cast<ASpawnLocationsController>(spawnControllerActor);
+
+			AActor* spawnLocationActor = spawnController->GetValidSpawnPoint();
+			const FVector spawnLocation = spawnLocationActor->GetActorLocation();
+			SetActorLocation(spawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+			ShowPlayer();
+		}
+	}
+}
+
+void ATPPlayer::HidePlayer() const
+{
+	GetCapsuleComponent()->SetCollisionProfileName(PlayerDeadCollisionName, true);
+	GetMesh()->SetCollisionProfileName(PlayerMeshDeadCollisionName, true);
+	PlayerMesh->SetHiddenInGame(true);
+	PlayerMesh->SetCollisionProfileName(PlayerMeshDeadCollisionName, true);
+	DamageBulletDisplay->SetTintColorAndOpacity(FLinearColor(1, 1, 1, 0));
+
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->HideWeapon();
+	}
+}
+
+void ATPPlayer::ShowPlayer() const
+{
+	GetCapsuleComponent()->SetCollisionProfileName(PlayerDefaultCollisionName, true);
+	GetMesh()->SetCollisionProfileName(PlayerMeshDefaultCollisionName, true);
+	PlayerMesh->SetHiddenInGame(false);
+	PlayerMesh->SetCollisionProfileName(PlayerMeshDefaultCollisionName, true);
+	DamageBulletDisplay->SetTintColorAndOpacity(FLinearColor(1, 1, 1, 1));
+
+	if (N_CurrentWeapon != nullptr)
+	{
+		N_CurrentWeapon->ShowWeapon();
+	}
+}
+
 bool ATPPlayer::CanAcceptShootingInput() const
 {
-	if (!CanAcceptPlayerInput() || GetTopPlayerState() == EPlayerMovementState::Run)
+	if (N_IsPlayerDead || !CanAcceptPlayerInput() || GetTopPlayerState() == EPlayerMovementState::Run)
 	{
 		return false;
 	}
@@ -1811,6 +1874,11 @@ bool ATPPlayer::IsLeftShoulder()
 	return N_IsCameraLeftShoulder;
 }
 
+bool ATPPlayer::IsPlayerDead()
+{
+	return N_IsPlayerDead;
+}
+
 FVector ATPPlayer::GetWeaponAttachPoint()
 {
 	if (N_CurrentWeapon == nullptr)
@@ -1844,7 +1912,20 @@ void ATPPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ATPPlayer, N_IsCameraLeftShoulder);
 	DOREPLIFETIME(ATPPlayer, N_IsCameraInAds);
 	DOREPLIFETIME(ATPPlayer, N_IsClimbing);
+	DOREPLIFETIME(ATPPlayer, N_IsPlayerDead);
 	DOREPLIFETIME(ATPPlayer, N_CurrentWeapon);
+}
+
+void ATPPlayer::OnDeathDataFromNetwork()
+{
+	if (N_IsPlayerDead)
+	{
+		HidePlayer();
+	}
+	else
+	{
+		ShowPlayer();
+	}
 }
 
 void ATPPlayer::OnDataFromNetwork()

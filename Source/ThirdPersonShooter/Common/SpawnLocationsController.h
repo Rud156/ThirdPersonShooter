@@ -6,15 +6,14 @@
 #include "GameFramework/Actor.h"
 #include "SpawnLocationsController.generated.h"
 
+class APlayerStart;
+
 UCLASS()
 class THIRDPERSONSHOOTER_API ASpawnLocationsController : public AActor
 {
 	GENERATED_BODY()
 
-protected:
-	virtual void BeginPlay() override;
-
 public:
 	ASpawnLocationsController();
-	virtual void Tick(float DeltaTime) override;
+	AActor* GetValidSpawnPoint() const;
 };

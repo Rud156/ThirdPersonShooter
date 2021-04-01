@@ -45,8 +45,12 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UHealthDisplayComponent* HealthDisplayComp;
 
+	float _respawnTimer;
 	UFUNCTION()
 	void HandlePlayerDied(AActor* Unit);
+	void UpdatePlayerDied(const float DeltaTime);
+	void HidePlayer() const;
+	void ShowPlayer() const;
 
 	float _horizontalInput;
 	float _verticalInput;
@@ -300,6 +304,21 @@ public:
 	UPROPERTY(Category="Player|Weapon", EditAnywhere)
 	FName GunMuzzleSocketName;
 
+	UPROPERTY(Category="Player|Death", EditAnywhere)
+	float RespawnTimer;
+
+	UPROPERTY(Category="Player|Death", EditAnywhere)
+	FName PlayerDefaultCollisionName;
+
+	UPROPERTY(Category="Player|Death", EditAnywhere)
+	FName PlayerDeadCollisionName;
+
+	UPROPERTY(Category="Player|Death", EditAnywhere)
+	FName PlayerMeshDefaultCollisionName;
+
+	UPROPERTY(Category="Player|Death", EditAnywhere)
+	FName PlayerMeshDeadCollisionName;
+
 #pragma endregion
 
 #pragma region Networked Data
@@ -316,8 +335,14 @@ public:
 	UPROPERTY(ReplicatedUsing=OnDataFromNetwork)
 	bool N_IsClimbing;
 
+	UPROPERTY(ReplicatedUsing=OnDeathDataFromNetwork)
+	bool N_IsPlayerDead;
+
 	UPROPERTY(ReplicatedUsing=OnWeaponDataFromNetwork)
 	ABaseShootingWeapon* N_CurrentWeapon;
+
+	UFUNCTION()
+	void OnDeathDataFromNetwork();
 
 	UFUNCTION()
 	void OnDataFromNetwork();
@@ -488,6 +513,9 @@ public:
 
 	UFUNCTION(Category = "Player|Camera", BlueprintCallable, BlueprintPure)
 	bool IsLeftShoulder();
+
+	UFUNCTION(Category = "Player|Death", BlueprintCallable, BlueprintPure)
+	bool IsPlayerDead();
 
 	UFUNCTION(Category = "Player|Weapon", BlueprintCallable, BlueprintPure)
 	FVector GetWeaponAttachPoint();
