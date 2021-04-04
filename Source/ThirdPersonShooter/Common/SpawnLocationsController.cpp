@@ -32,42 +32,56 @@ AActor* ASpawnLocationsController::GetValidSpawnPoint() const
 		}
 		centerOfMass /= players.Num();
 
-		float maxDistance = TNumericLimits<float>::Min();
-		AActor* farthestPlayerStart = nullptr;
+		TArray<FPlayerSpawnData> playerSpawns;
 		for (int i = 0; i < playerStarts.Num(); i++)
 		{
-			const FVector location = playerStarts[i]->GetActorLocation();
-			const float distance = FVector::Dist(location, centerOfMass);
+			const FVector startPosition = playerStarts[i]->GetActorLocation();
+			const float distance = FVector::Dist(startPosition, centerOfMass);
 
-			if (distance > maxDistance)
+			FPlayerSpawnData spawnData = {distance, false, playerStarts[i]};
+			if (distance > MAX_VALID_DISTANCE)
 			{
-				maxDistance = distance;
-				farthestPlayerStart = playerStarts[i];
+				// Do nothing here...
+			}
+			else
+			{
+				const FVector upwardOffset = FVector::UpVector * UP_OFFSET;
+				for (int j = 0; j < players.Num(); j++)
+				{
+					AActor* player = players[j];
+					const bool los = HasLineOfSight(player, upwardOffset, playerStarts[i], upwardOffset);
+					if (los)
+					{
+						spawnData.IsInLineOfSight = true;
+						break;
+					}
+				}
+			}
+
+			playerSpawns.Add(spawnData);
+		}
+
+		playerSpawns.Sort([](const FPlayerSpawnData& spawnA, const FPlayerSpawnData& spawnB) -> bool
+		{
+			return spawnA.Distance > spawnB.Distance;
+		});
+
+		for (int i = 0; i < playerSpawns.Num(); i++)
+		{
+			if (!playerSpawns[i].IsInLineOfSight)
+			{
+				return playerSpawns[i].PlayerStart;
 			}
 		}
-		preferredSpawns.Add(Cast<APlayerStart>(farthestPlayerStart));
-	}
-	else
-	{
-		for (int i = 0; i < playerStarts.Num(); i++)
-		{
-			preferredSpawns.Add(Cast<APlayerStart>(playerStarts[i]));
-		}
+
+		return playerSpawns[0].PlayerStart;
 	}
 
-	APlayerStart* bestStart = nullptr;
-	if (preferredSpawns.Num() > 0)
-	{
-		bestStart = preferredSpawns[FMath::RandHelper(preferredSpawns.Num())];
-	}
-
-	return bestStart;
+	return playerStarts[FMath::RandHelper(playerStarts.Num())];
 }
 
 AActor* ASpawnLocationsController::GetValidSpawnPointPlayer(AActor* Player) const
 {
-	TArray<APlayerStart*> preferredSpawns;
-
 	TArray<AActor*> playerStarts;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), playerStarts);
 
@@ -89,34 +103,85 @@ AActor* ASpawnLocationsController::GetValidSpawnPointPlayer(AActor* Player) cons
 		}
 		centerOfMass /= (players.Num() - 1);
 
-		float maxDistance = TNumericLimits<float>::Min();
-		AActor* farthestPlayerStart = nullptr;
+		TArray<FPlayerSpawnData> playerSpawns;
 		for (int i = 0; i < playerStarts.Num(); i++)
 		{
-			const FVector location = playerStarts[i]->GetActorLocation();
-			const float distance = FVector::Dist(location, centerOfMass);
+			const FVector startPosition = playerStarts[i]->GetActorLocation();
+			const float distance = FVector::Dist(startPosition, centerOfMass);
 
-			if (distance > maxDistance)
+			FPlayerSpawnData spawnData = {distance, false, playerStarts[i]};
+			if (distance > MAX_VALID_DISTANCE)
 			{
-				maxDistance = distance;
-				farthestPlayerStart = playerStarts[i];
+				// Do nothing here...
+			}
+			else
+			{
+				const FVector upwardOffset = FVector::UpVector * UP_OFFSET;
+				for (int j = 0; j < players.Num(); j++)
+				{
+					AActor* player = players[j];
+					if (player == Player)
+					{
+						continue;
+					}
+					
+					const bool los = HasLineOfSight(player, upwardOffset, playerStarts[i], upwardOffset);
+					if (los)
+					{
+						spawnData.IsInLineOfSight = true;
+						break;
+					}
+				}
+			}
+
+			playerSpawns.Add(spawnData);
+		}
+
+		playerSpawns.Sort([](const FPlayerSpawnData& spawnA, const FPlayerSpawnData& spawnB) -> bool
+		{
+			return spawnA.Distance > spawnB.Distance;
+		});
+
+		for (int i = 0; i < playerSpawns.Num(); i++)
+		{
+			if (!playerSpawns[i].IsInLineOfSight)
+			{
+				return playerSpawns[i].PlayerStart;
 			}
 		}
-		preferredSpawns.Add(Cast<APlayerStart>(farthestPlayerStart));
-	}
-	else
-	{
-		for (int i = 0; i < playerStarts.Num(); i++)
-		{
-			preferredSpawns.Add(Cast<APlayerStart>(playerStarts[i]));
-		}
+
+		return playerSpawns[0].PlayerStart;
 	}
 
-	APlayerStart* bestStart = nullptr;
-	if (preferredSpawns.Num() > 0)
+	return playerStarts[FMath::RandHelper(playerStarts.Num())];
+}
+
+bool ASpawnLocationsController::HasLineOfSight(AActor* StartActor, const FVector StartActorOffset, AActor* TargetActor, const FVector TargetActorOffset,
+                                               const float HalfLookAngle) const
+{
+	// General Collision Params Used for All Collisions
+	FCollisionQueryParams collisionParams;
+	collisionParams.AddIgnoredActor(StartActor);
+	collisionParams.AddIgnoredActor(TargetActor);
+
+	const FVector startLocation = StartActor->GetActorLocation() + StartActorOffset;
+	const FVector endLocation = TargetActor->GetActorLocation() + TargetActorOffset;
+
+	FHitResult hitResult;
+	const bool hit = GetWorld()->LineTraceSingleByChannel(hitResult, startLocation, endLocation, ECollisionChannel::ECC_Visibility, collisionParams);
+	if (hit)
 	{
-		bestStart = preferredSpawns[FMath::RandHelper(preferredSpawns.Num())];
+		return false;
 	}
 
-	return bestStart;
+	const FVector forwardVector = StartActor->GetActorForwardVector();
+	const FVector directionVector = TargetActor->GetActorLocation() - StartActor->GetActorLocation();
+
+	const float angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(forwardVector, directionVector)));
+	if (angle > HalfLookAngle)
+	{
+		return false;
+	}
+
+	return true;
 }

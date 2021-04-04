@@ -31,6 +31,8 @@ ABaseShootingWeapon::ABaseShootingWeapon(const class FObjectInitializer& PCIP) :
 void ABaseShootingWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+	_lastShotRemainderTime = 0;
+	_lastShotTime = 0;
 }
 
 void ABaseShootingWeapon::Tick(float DeltaSeconds)
@@ -43,36 +45,42 @@ void ABaseShootingWeapon::Tick(float DeltaSeconds)
 
 		if (_currentRecoilResetTime <= 0)
 		{
+			_lastShotRemainderTime = 0;
+			_lastShotTime = 0;
+
 			RecoilResetCallback.Broadcast();
 		}
 	}
 }
 
-bool ABaseShootingWeapon::CanShoot() const
+int ABaseShootingWeapon::GetShootCountAndSaveRemainder()
 {
-	const float currentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-	const float diff = currentTime - _lastShotTime;
-
-	if (diff > FireRate)
+	if (_lastShotTime <= 0)
 	{
-		return true;
+		return 1;
 	}
 
-	return false;
+	const float currentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
+	const float diff = (currentTime - _lastShotTime) + _lastShotRemainderTime;
+	const int shootCount = FMath::FloorToInt(diff / FireRate);
+
+	if (shootCount > 0)
+	{
+		const float remainder = diff - shootCount * FireRate;
+		_lastShotRemainderTime = remainder;
+	}
+
+	return shootCount;
 }
 
-void ABaseShootingWeapon::PlayAudio() const
+void ABaseShootingWeapon::ShootingSetComplete()
 {
-	WeaponAudio->Play();
+	_currentRecoilResetTime = RecoilResetDelay;
+	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 }
 
 FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bool IsInAds)
 {
-	if (!CanShoot())
-	{
-		return {FVector2D::ZeroVector, FVector2D::ZeroVector};
-	}
-
 	// ADS or No ADS
 	FVector2D defaultFiringError = DefaultFiringError;
 	FVector2D movementFiringError = MovementFiringError;
@@ -148,8 +156,6 @@ FRecoilOffset ABaseShootingWeapon::ShootWithRecoil(const bool IsMoving, const bo
 	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, "Bullets Shot: " + FString::SanitizeFloat(_bulletsShot));
 
 	_bulletsShot += 1;
-	_currentRecoilResetTime = RecoilResetDelay;
-	_lastShotTime = UGameplayStatics::GetTimeSeconds(GetWorld());
 
 	// GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "Raycast Offset: " + rayCastOffset.ToString());
 	// GEngine->AddOnScreenDebugMessage(-1, 1, FColor::Red, "CrossHair Offset: " + crossHairOffset.ToString());
@@ -169,22 +175,38 @@ void ABaseShootingWeapon::ResetRecoilData(const int BulletsShot)
 	}
 }
 
-void ABaseShootingWeapon::PickupWeapon()
+bool ABaseShootingWeapon::PickupWeapon(ATPPlayer* CurrentOwner)
 {
+	if (_currentOwner != nullptr && _currentOwner != CurrentOwner)
+	{
+		return false;
+	}
+
 	WeaponCollider->SetEnableGravity(false);
 	WeaponCollider->SetSimulatePhysics(false);
-	WeaponCollider->SetCollisionProfileName("NoCollision");
+	WeaponCollider->SetCollisionProfileName("IgnoreAll");
 	SetReplicateMovement(false);
+
+	_currentOwner = CurrentOwner;
+	return true;
 }
 
-void ABaseShootingWeapon::DropWeapon()
+bool ABaseShootingWeapon::DropWeapon(ATPPlayer* CurrentOwner)
 {
-	WeaponCollider->SetCollisionProfileName("BlockAllDynamic");
+	if (_currentOwner != nullptr && _currentOwner != CurrentOwner)
+	{
+		return false;
+	}
+
+	WeaponCollider->SetCollisionProfileName("Weapon");
 	WeaponCollider->SetSimulatePhysics(true);
 	WeaponCollider->SetEnableGravity(true);
 
 	RecoilResetCallback.Clear();
 	SetReplicateMovement(true);
+
+	_currentOwner = nullptr;
+	return true;
 }
 
 void ABaseShootingWeapon::ShowWeapon() const
@@ -195,6 +217,11 @@ void ABaseShootingWeapon::ShowWeapon() const
 void ABaseShootingWeapon::HideWeapon() const
 {
 	WeaponMesh->SetHiddenInGame(true);
+}
+
+void ABaseShootingWeapon::PlayAudio() const
+{
+	WeaponAudio->Play();
 }
 
 int ABaseShootingWeapon::GetCurrentBulletCount() const

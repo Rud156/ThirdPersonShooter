@@ -21,6 +21,7 @@ public:
 	TSubclassOf<class ASpawnLocationsController> SpawnControllerPrefab;
 
 #pragma endregion
+	virtual void Logout(AController* Exiting) override;
 
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	virtual AActor* FindPlayerStart_Implementation(AController* Player, const FString& IncomingName) override;

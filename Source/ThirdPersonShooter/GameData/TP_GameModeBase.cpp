@@ -3,16 +3,36 @@
 
 #include "./TP_GameModeBase.h"
 #include "../Player/TPPlayer.h"
+#include "../Player/TPPlayerController.h"
 #include "../Common/SpawnLocationsController.h"
 
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/PlayerStart.h"
 
 #include "EngineUtils.h"
-#include "GameFramework/PlayerStart.h"
+#include "Kismet/GameplayStatics.h"
+
+void ATP_GameModeBase::Logout(AController* Exiting)
+{
+	ATPPlayerController* playerController = Cast<ATPPlayerController>(Exiting);
+	if (playerController != nullptr)
+	{
+		ATPPlayer* player = Cast<ATPPlayer>(playerController->GetPawn());
+		if (player != nullptr)
+		{
+			player->DropCurrentWeapon();
+		}
+	}
+}
 
 AActor* ATP_GameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 {
-	AActor* spawnControllerActor = GetWorld()->SpawnActor(SpawnControllerPrefab, &FVector::ZeroVector, &FRotator::ZeroRotator);
+	AActor* spawnControllerActor = UGameplayStatics::GetActorOfClass(GetWorld(), ASpawnLocationsController::StaticClass());
+	if (spawnControllerActor == nullptr)
+	{
+		spawnControllerActor = GetWorld()->SpawnActor(SpawnControllerPrefab, &FVector::ZeroVector, &FRotator::ZeroRotator);
+	}
+
 	ASpawnLocationsController* spawnController = Cast<ASpawnLocationsController>(spawnControllerActor);
 
 	AActor* bestStart = spawnController->GetValidSpawnPoint();

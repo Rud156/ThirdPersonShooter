@@ -33,9 +33,11 @@ private:
 	class UInteractionComponent* InteractionComponent;
 
 	int _bulletsShot;
-
 	float _currentRecoilResetTime;
 	float _lastShotTime;
+	float _lastShotRemainderTime;
+
+	ATPPlayer* _currentOwner;
 
 protected:
 	virtual void BeginPlay() override;
@@ -149,18 +151,19 @@ public:
 #pragma endregion
 
 	USkeletalMeshComponent* GetMesh() const;
-	bool CanShoot() const;
-
-	void PlayAudio() const;
+	
+	int GetShootCountAndSaveRemainder();
+	void ShootingSetComplete();
 	FRecoilOffset ShootWithRecoil(const bool IsMoving, const bool IsInAds);
 	void ResetRecoilData(const int BulletsShot);
 
-	void PickupWeapon();
-	void DropWeapon();
+	bool PickupWeapon(ATPPlayer* CurrentOwner);
+	bool DropWeapon(ATPPlayer* CurrentOwner);
 
 	void ShowWeapon() const;
 	void HideWeapon() const;
 
+	void PlayAudio() const;
 	int GetCurrentBulletCount() const;
 	int GetDamageForBone(const FString BoneName) const;
 

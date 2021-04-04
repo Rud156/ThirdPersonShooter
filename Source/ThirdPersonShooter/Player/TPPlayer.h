@@ -33,6 +33,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* GunShootClearPoint;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* PunchCollider;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UHealthAndDamageComponent* HealthAndDamage;
 
@@ -51,12 +54,13 @@ private:
 	void UpdatePlayerDied(const float DeltaTime);
 	void HidePlayer() const;
 	void ShowPlayer() const;
+	void ResetDefaultState();
 
 	float _horizontalInput;
 	float _verticalInput;
 	void SendPlayerInputsToServer();
 	void UpdateMovementServerRemote();
-	
+
 	void SendLookRotationToServer();
 	void SetCameraBoomPitchRotation(const FRotator ControlRotation) const;
 
@@ -129,6 +133,16 @@ private:
 	void BulletShot(const FVector StartPosition, const FVector EndPosition) const;
 	void CheckAndDealDamage(AActor* HitActor, const FString BoneName) const;
 	void ClearRecoilData();
+
+	bool _isPunching;
+	bool _punchAlreadyHit;
+	UFUNCTION()
+	void HandlePunchCollided(UPrimitiveComponent* OverlappedComponent,
+	                         AActor* OtherActor,
+	                         UPrimitiveComponent* OtherComp,
+	                         int32 OtherBodyIndex,
+	                         bool bFromSweep,
+	                         const FHitResult& SweepResult);
 
 	bool CanAcceptShootingInput() const;
 	bool CanAcceptPlayerInput() const;
@@ -304,6 +318,27 @@ public:
 	UPROPERTY(Category="Player|Weapon", EditAnywhere)
 	FName GunMuzzleSocketName;
 
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	float PunchDamageAmount;
+
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	FName LeftHand;
+
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	FVector LeftHandPunchLocation;
+
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	FRotator LeftHandPunchRotation;
+
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	FName RightHand;
+
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	FVector RightHandPunchLocation;
+
+	UPROPERTY(Category="Player|Melee", EditAnywhere)
+	FRotator RightHandPunchRotation;
+
 	UPROPERTY(Category="Player|Death", EditAnywhere)
 	float RespawnTimer;
 
@@ -462,9 +497,20 @@ public:
 
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
 	void DropWeapon(ABaseShootingWeapon* Weapon);
+	void DropCurrentWeapon();
+	ABaseShootingWeapon* GetCurrentWeapon() const;
 
 	UFUNCTION()
 	void ResetPreRecoilCamera();
+
+	UFUNCTION(Category="Player|Attack", BlueprintImplementableEvent)
+	void PlayerPunchNotify();
+
+	UFUNCTION(Category="Player|Attack", BlueprintCallable)
+	void HandlePunchAnimComplete();
+
+	UFUNCTION(Category="Player|Attack", BlueprintCallable, BlueprintPure)
+	bool IsPunching();
 
 	UFUNCTION(Category = "Player|Movement", BlueprintImplementableEvent)
 	void PlayerJumpNotify();

@@ -12,6 +12,7 @@
 #include "../Common/SpawnLocationsController.h"
 
 #include "Camera/CameraComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -62,6 +63,9 @@ ATPPlayer::ATPPlayer(const class FObjectInitializer& PCIP) : Super(PCIP.SetDefau
 	GunShootClearPoint = CreateDefaultSubobject<USceneComponent>(TEXT("GunShootClearPoint"));
 	GunShootClearPoint->SetupAttachment(FollowCamera);
 
+	PunchCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("PunchCollider"));
+	PunchCollider->SetupAttachment(PlayerMesh);
+
 	DamageBulletDisplay = CreateDefaultSubobject<UDamageBulletDisplayComponent>(TEXT("DamageBulletDisplay"));
 	DamageBulletDisplay->SetupAttachment(RootComponent);
 
@@ -92,6 +96,16 @@ void ATPPlayer::BeginPlay()
 	WeaponAttachPoint->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 	WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
 	WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
+
+	PunchCollider->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget,
+	                                                                       EAttachmentRule::KeepWorld, true), RightHand);
+	PunchCollider->SetRelativeLocation(RightHandPunchLocation);
+	PunchCollider->SetRelativeRotation(RightHandPunchRotation);
+
+	if (HasAuthority())
+	{
+		PunchCollider->OnComponentBeginOverlap.AddDynamic(this, &ATPPlayer::HandlePunchCollided);
+	}
 }
 
 void ATPPlayer::Tick(float DeltaTime)
@@ -641,11 +655,18 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		                                                                            EDetachmentRule::KeepWorld,
 		                                                                            EDetachmentRule::KeepWorld,
 		                                                                            true);
+
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
+		PunchCollider->DetachFromComponent(detachmentRules);
 
 		WeaponAttachPoint->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), LeftHandSocket);
 		WeaponAttachPoint->SetRelativeLocation(LeftAttachmentLocation);
 		WeaponAttachPoint->SetRelativeRotation(LeftAttachmentRotation);
+
+		PunchCollider->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget,
+		                                                                       EAttachmentRule::KeepWorld, true), LeftHand);
+		PunchCollider->SetRelativeLocation(LeftHandPunchLocation);
+		PunchCollider->SetRelativeRotation(LeftHandPunchRotation);
 	}
 	else
 	{
@@ -653,11 +674,18 @@ void ATPPlayer::HandleShoulderSwapPressed()
 		                                                                            EDetachmentRule::KeepWorld,
 		                                                                            EDetachmentRule::KeepWorld,
 		                                                                            true);
+
 		WeaponAttachPoint->DetachFromComponent(detachmentRules);
+		PunchCollider->DetachFromComponent(detachmentRules);
 
 		WeaponAttachPoint->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), RightHandSocket);
 		WeaponAttachPoint->SetRelativeLocation(RightAttachmentLocation);
 		WeaponAttachPoint->SetRelativeRotation(RightAttachmentRotation);
+
+		PunchCollider->AttachToComponent(PlayerMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget,
+		                                                                       EAttachmentRule::KeepWorld, true), RightHand);
+		PunchCollider->SetRelativeLocation(RightHandPunchLocation);
+		PunchCollider->SetRelativeRotation(RightHandPunchRotation);
 	}
 
 	ShoulderSwapNotify();
@@ -777,6 +805,7 @@ void ATPPlayer::HandleDivePressed()
 		N_CurrentWeapon->HideWeapon();
 	}
 
+	ResetDefaultState();
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
 
@@ -1276,6 +1305,7 @@ bool ATPPlayer::HandleWallClimb()
 		{
 			N_CurrentWeapon->HideWeapon();
 		}
+		ResetDefaultState();
 		PlayerClimbNotify(targetRotation, delta);
 
 		return true;
@@ -1322,6 +1352,8 @@ bool ATPPlayer::HandleVault()
 		{
 			N_CurrentWeapon->HideWeapon();
 		}
+
+		ResetDefaultState();
 		PlayerVaultNotify(targetRotation, delta);
 
 		return true;
@@ -1460,7 +1492,21 @@ void ATPPlayer::UpdateVaultForward(const float DeltaTime)
 
 void ATPPlayer::HandleFirePressed()
 {
-	_firePressed = true;
+	if (N_CurrentWeapon != nullptr)
+	{
+		_firePressed = true;
+	}
+	else
+	{
+		if (_isPunching)
+		{
+			return;
+		}
+
+		_isPunching = true;
+		_punchAlreadyHit = false;
+		PlayerPunchNotify();
+	}
 }
 
 void ATPPlayer::Client_HandleFirePressed()
@@ -1578,8 +1624,14 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 		return;
 	}
 
-	if (N_CurrentWeapon->CanShoot() && _firePressed)
+	if (_firePressed)
 	{
+		const int shootCount = N_CurrentWeapon->GetShootCountAndSaveRemainder();
+		if (shootCount <= 0)
+		{
+			return;
+		}
+
 		const float currentAmount = _recoilLerpCurve->GetFloatValue(_recoilLerpAmount);
 		const FVector2D currentRecoilAmount = FMath::Lerp(_startRecoilOffset, _targetRecoilOffset, currentAmount);
 		if (_resetRecoil)
@@ -1592,28 +1644,33 @@ void ATPPlayer::UpdateFirePressed(const float DeltaTime)
 		}
 		_startRecoilOffset = currentRecoilAmount;
 
-		const FRecoilOffset recoilOffset = N_CurrentWeapon->ShootWithRecoil(IsMoving(), N_IsCameraInAds);
-
-		_targetRecoilOffset += recoilOffset.CrossHairOffset;
-		_recoilLerpAmount = 0;
-		_recoilLerpSpeed = N_CurrentWeapon->RecoilShootLerpSpeed;
-		_resetRecoil = false;
-
-		// This is the final raycast that will get hit...
-		const FVector startPosition = InteractCastPoint->GetComponentLocation();
-		const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
-			FollowCamera->GetUpVector() * recoilOffset.RayCastOffset.Y +
-			FollowCamera->GetRightVector() * recoilOffset.RayCastOffset.X;
-
-		BulletShot(startPosition, endPosition);
-		if (!HasAuthority())
+		for (int i = 0; i < shootCount; i++)
 		{
-			Server_BulletShot(startPosition, endPosition);
+			const FRecoilOffset recoilOffset = N_CurrentWeapon->ShootWithRecoil(IsMoving(), N_IsCameraInAds);
+
+			_targetRecoilOffset += recoilOffset.CrossHairOffset;
+			_recoilLerpAmount = 0;
+			_recoilLerpSpeed = N_CurrentWeapon->RecoilShootLerpSpeed;
+			_resetRecoil = false;
+
+			// This is the final raycast that will get hit...
+			const FVector startPosition = InteractCastPoint->GetComponentLocation();
+			const FVector endPosition = startPosition + FollowCamera->GetForwardVector() * MaxShootDistance +
+				FollowCamera->GetUpVector() * recoilOffset.RayCastOffset.Y +
+				FollowCamera->GetRightVector() * recoilOffset.RayCastOffset.X;
+
+			BulletShot(startPosition, endPosition);
+			if (!HasAuthority())
+			{
+				Server_BulletShot(startPosition, endPosition);
+			}
+			else
+			{
+				Remote_BulletShot(startPosition, endPosition);
+			}
 		}
-		else
-		{
-			Remote_BulletShot(startPosition, endPosition);
-		}
+		N_CurrentWeapon->ShootingSetComplete();
+		N_CurrentWeapon->PlayAudio();
 	}
 }
 
@@ -1639,7 +1696,7 @@ void ATPPlayer::ClearRecoilData()
 
 void ATPPlayer::Server_BulletShot_Implementation(const FVector StartPosition, const FVector EndPosition)
 {
-	if (!CanAcceptShootingInput() || N_CurrentWeapon == nullptr || !N_CurrentWeapon->CanShoot() || !_firePressed)
+	if (!CanAcceptShootingInput() || N_CurrentWeapon == nullptr || !_firePressed)
 	{
 		return;
 	}
@@ -1661,10 +1718,6 @@ void ATPPlayer::Remote_BulletShot_Implementation(const FVector StartPosition, co
 void ATPPlayer::BulletShot(const FVector StartPosition, const FVector EndPosition) const
 {
 	FVector sphereLocation = EndPosition;
-	if (N_CurrentWeapon != nullptr)
-	{
-		N_CurrentWeapon->PlayAudio();
-	}
 
 	// Cast Initial Check
 	FCollisionQueryParams wallCheckCollisionParams;
@@ -1735,7 +1788,12 @@ void ATPPlayer::PickupWeapon(ABaseShootingWeapon* Weapon)
 	                                                                            EAttachmentRule::KeepWorld,
 	                                                                            true);
 
-	Weapon->PickupWeapon();
+	const bool pickupSuccess = Weapon->PickupWeapon(this);
+	if (!pickupSuccess)
+	{
+		return;
+	}
+
 	Weapon->RecoilResetCallback.AddDynamic(this, &ATPPlayer::ResetPreRecoilCamera);
 	Weapon->AttachToComponent(WeaponAttachPoint, attachmentRules);
 
@@ -1754,7 +1812,12 @@ void ATPPlayer::DropWeapon(ABaseShootingWeapon* Weapon)
 		return;
 	}
 
-	Weapon->DropWeapon();
+	const bool dropSuccess = Weapon->DropWeapon(this);
+	if (!dropSuccess)
+	{
+		return;
+	}
+
 	const FDetachmentTransformRules detachRules = FDetachmentTransformRules(EDetachmentRule::KeepWorld,
 	                                                                        EDetachmentRule::KeepWorld,
 	                                                                        EDetachmentRule::KeepWorld,
@@ -1762,6 +1825,46 @@ void ATPPlayer::DropWeapon(ABaseShootingWeapon* Weapon)
 	Weapon->DetachFromActor(detachRules);
 
 	N_CurrentWeapon = nullptr;
+}
+
+void ATPPlayer::DropCurrentWeapon()
+{
+	if (N_CurrentWeapon != nullptr)
+	{
+		DropWeapon(N_CurrentWeapon);
+	}
+}
+
+ABaseShootingWeapon* ATPPlayer::GetCurrentWeapon() const
+{
+	return N_CurrentWeapon;
+}
+
+void ATPPlayer::HandlePunchCollided(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+                                    const FHitResult& SweepResult)
+{
+	if (!_isPunching || _punchAlreadyHit || !HasAuthority() || OtherActor == this)
+	{
+		return;
+	}
+
+	UActorComponent* healthAndDamageComponent = OtherActor->GetComponentByClass(UHealthAndDamageComponent::StaticClass());
+	UHealthAndDamageComponent* healthAndDamage = Cast<UHealthAndDamageComponent>(healthAndDamageComponent);
+	if (healthAndDamage != nullptr)
+	{
+		healthAndDamage->TakeDamage(PunchDamageAmount);
+		_punchAlreadyHit = true;
+	}
+}
+
+void ATPPlayer::HandlePunchAnimComplete()
+{
+	_isPunching = false;
+}
+
+bool ATPPlayer::IsPunching()
+{
+	return _isPunching;
 }
 
 void ATPPlayer::HandlePlayerDied(AActor* Unit)
@@ -1827,6 +1930,12 @@ void ATPPlayer::ShowPlayer() const
 	{
 		N_CurrentWeapon->ShowWeapon();
 	}
+}
+
+void ATPPlayer::ResetDefaultState()
+{
+	_isPunching = false;
+	_punchAlreadyHit = false;
 }
 
 bool ATPPlayer::CanAcceptShootingInput() const
