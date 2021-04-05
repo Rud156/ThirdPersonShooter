@@ -130,6 +130,11 @@ void ATPPlayer::Tick(float DeltaTime)
 	CheckAndActivateWallClimb();
 }
 
+void ATPPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	DropCurrentWeapon();
+}
+
 void ATPPlayer::MoveForward(const float Value)
 {
 	_verticalInput = Value;

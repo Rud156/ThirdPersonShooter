@@ -494,6 +494,7 @@ public:
 
 	ATPPlayer(const class FObjectInitializer& PCIP);
 	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void PickupWeapon(ABaseShootingWeapon* Weapon);
 	void DropWeapon(ABaseShootingWeapon* Weapon);
