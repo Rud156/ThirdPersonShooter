@@ -26,7 +26,7 @@ public:
 
 	AActor* GetValidSpawnPoint() const;
 	AActor* GetValidSpawnPointPlayer(AActor* Player) const;
-	AActor* CalculateFarthestValidSpawnPoint() const;
 
+	AActor* CalculateValidSpawnPoint(TArray<AActor*> Players, TArray<AActor*> PlayerStarts) const;
 	bool HasLineOfSight(AActor* StartActor, const FVector StartActorOffset, AActor* TargetActor, const FVector TargetActorOffset, const float HalfLookAngle = 45) const;
 };

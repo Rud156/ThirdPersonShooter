@@ -805,7 +805,7 @@ void ATPPlayer::HandleDivePressed()
 		N_CurrentWeapon->HideWeapon();
 	}
 
-	ResetDefaultState();
+	ResetPlayerAnimationData();
 	PushPlayerMovementState(EPlayerMovementState::Dive);
 	ApplyChangesToCharacter();
 
@@ -1305,7 +1305,7 @@ bool ATPPlayer::HandleWallClimb()
 		{
 			N_CurrentWeapon->HideWeapon();
 		}
-		ResetDefaultState();
+		ResetPlayerAnimationData();
 		PlayerClimbNotify(targetRotation, delta);
 
 		return true;
@@ -1353,7 +1353,7 @@ bool ATPPlayer::HandleVault()
 			N_CurrentWeapon->HideWeapon();
 		}
 
-		ResetDefaultState();
+		ResetPlayerAnimationData();
 		PlayerVaultNotify(targetRotation, delta);
 
 		return true;
@@ -1932,7 +1932,7 @@ void ATPPlayer::ShowPlayer() const
 	}
 }
 
-void ATPPlayer::ResetDefaultState()
+void ATPPlayer::ResetPlayerAnimationData()
 {
 	_isPunching = false;
 	_punchAlreadyHit = false;

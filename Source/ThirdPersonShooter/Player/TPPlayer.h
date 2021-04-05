@@ -54,7 +54,7 @@ private:
 	void UpdatePlayerDied(const float DeltaTime);
 	void HidePlayer() const;
 	void ShowPlayer() const;
-	void ResetDefaultState();
+	void ResetPlayerAnimationData();
 
 	float _horizontalInput;
 	float _verticalInput;
